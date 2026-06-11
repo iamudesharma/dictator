@@ -1,0 +1,17 @@
+#include "../../Flutter/Flutter-Release.xcconfig"
+#include "Warnings.xcconfig"
+
+// === Size Optimization Settings ===
+
+// Link-Time Optimization: enables cross-module dead code elimination
+LLVM_LTO = YES_THIN
+
+// Strip all symbols from final binary
+STRIP_INSTALLED_PRODUCT = YES
+STRIP_STYLE = all
+
+// Optimize for smallest size
+GCC_OPTIMIZATION_LEVEL = Oz
+
+// Build for Apple Silicon only (exclude Intel x86_64)
+EXCLUDED_ARCHS[sdk=macosx*] = x86_64
