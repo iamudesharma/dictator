@@ -38,7 +38,7 @@ class GrammarModelService {
   /// Otherwise loads Gemma 3 270M IT (Whisper / Nemotron path).
   Future<InferenceModel?> resolveTextModel({InferenceModel? sttSharedModel}) async {
     if (sttSharedModel != null) {
-      debugPrint('[Dictator][GrammarModel] Reusing Gemma STT model for text task');
+      debugPrint('[AuraScribe][GrammarModel] Reusing Gemma STT model for text task');
       return sttSharedModel;
     }
     await ensureLoaded();
@@ -56,7 +56,7 @@ class GrammarModelService {
     if (_loaded) return;
     _loading = true;
     try {
-      debugPrint('[Dictator][GrammarModel] Initializing flutter_gemma…');
+      debugPrint('[AuraScribe][GrammarModel] Initializing flutter_gemma…');
       await FlutterGemma.initialize();
 
       await _installGemma270m();
@@ -66,9 +66,9 @@ class GrammarModelService {
         preferredBackend: PreferredBackend.cpu,
       );
       _loaded = true;
-      debugPrint('[Dictator][GrammarModel] ✅ Gemma 3 270M IT ready (CPU)');
+      debugPrint('[AuraScribe][GrammarModel] ✅ Gemma 3 270M IT ready (CPU)');
     } catch (e) {
-      debugPrint('[Dictator][GrammarModel] ❌ Load failed, retrying clean install: $e');
+      debugPrint('[AuraScribe][GrammarModel] ❌ Load failed, retrying clean install: $e');
       await _purgeBrokenInstall();
       await _installGemma270m(force: true);
       _model = await FlutterGemma.getActiveModel(
@@ -77,7 +77,7 @@ class GrammarModelService {
         preferredBackend: PreferredBackend.cpu,
       );
       _loaded = true;
-      debugPrint('[Dictator][GrammarModel] ✅ Gemma 3 270M IT ready after retry');
+      debugPrint('[AuraScribe][GrammarModel] ✅ Gemma 3 270M IT ready after retry');
     } finally {
       _loading = false;
       _loadInFlight = null;
@@ -92,7 +92,7 @@ class GrammarModelService {
     }
 
     final token = _resolveHfToken();
-    debugPrint('[Dictator][GrammarModel] Installing Gemma 3 270M (litertlm)…');
+    debugPrint('[AuraScribe][GrammarModel] Installing Gemma 3 270M (litertlm)…');
     await FlutterGemma.installModel(
       modelType: ModelType.gemmaIt,
       fileType: ModelFileType.litertlm,
@@ -107,7 +107,7 @@ class GrammarModelService {
         'Gemma 3 270M download looks incomplete ($size bytes at $path)',
       );
     }
-    debugPrint('[Dictator][GrammarModel] Verified model on disk ($size bytes)');
+    debugPrint('[AuraScribe][GrammarModel] Verified model on disk ($size bytes)');
   }
 
   Future<String> _expectedModelPath() async {
@@ -125,7 +125,7 @@ class GrammarModelService {
     final registered = await FlutterGemma.isModelInstalled(_fileName);
     if (registered || !onDisk) {
       debugPrint(
-        '[Dictator][GrammarModel] Purging stale install '
+        '[AuraScribe][GrammarModel] Purging stale install '
         '(registered=$registered, onDisk=$onDisk, path=$path)',
       );
       await _purgeBrokenInstall();
@@ -142,7 +142,7 @@ class GrammarModelService {
     for (final id in [_fileName, 'gemma3-270m-it-q8']) {
       try {
         await FlutterGemma.uninstallModel(id);
-        debugPrint('[Dictator][GrammarModel] Uninstalled $id via flutter_gemma');
+        debugPrint('[AuraScribe][GrammarModel] Uninstalled $id via flutter_gemma');
       } catch (_) {}
     }
 
@@ -151,10 +151,10 @@ class GrammarModelService {
       final file = File(path);
       if (await file.exists()) {
         await file.delete();
-        debugPrint('[Dictator][GrammarModel] Deleted $path');
+        debugPrint('[AuraScribe][GrammarModel] Deleted $path');
       }
     } catch (e) {
-      debugPrint('[Dictator][GrammarModel] File delete skipped: $e');
+      debugPrint('[AuraScribe][GrammarModel] File delete skipped: $e');
     }
 
     try {
@@ -162,10 +162,10 @@ class GrammarModelService {
       final legacyDir = Directory('${supportDir.path}/models/gemma_3_270m');
       if (await legacyDir.exists()) {
         await legacyDir.delete(recursive: true);
-        debugPrint('[Dictator][GrammarModel] Removed legacy cache at ${legacyDir.path}');
+        debugPrint('[AuraScribe][GrammarModel] Removed legacy cache at ${legacyDir.path}');
       }
     } catch (e) {
-      debugPrint('[Dictator][GrammarModel] Legacy cache purge skipped: $e');
+      debugPrint('[AuraScribe][GrammarModel] Legacy cache purge skipped: $e');
     }
   }
 }

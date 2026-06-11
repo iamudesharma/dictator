@@ -31,15 +31,15 @@ class GrammarService {
 
   Future<String> clean(String rawText) async {
     if (!_settings.grammarEnabled) {
-      debugPrint('[Dictator][Grammar] skipped — disabled in settings');
+      debugPrint('[AuraScribe][Grammar] skipped — disabled in settings');
       return rawText;
     }
     if (rawText.trim().isEmpty) {
-      debugPrint('[Dictator][Grammar] skipped — empty input');
+      debugPrint('[AuraScribe][Grammar] skipped — empty input');
       return rawText;
     }
     if (rawText.trim().length < 24) {
-      debugPrint('[Dictator][Grammar] skipped — short text (<24 chars)');
+      debugPrint('[AuraScribe][Grammar] skipped — short text (<24 chars)');
       return rawText;
     }
 
@@ -48,13 +48,13 @@ class GrammarService {
       final grammarModel = _cachedGrammarModel ??= _grammarModelFactory();
       model = await grammarModel.resolveTextModel(sttSharedModel: _sttSharedModel);
     } catch (e) {
-      debugPrint('[Dictator][Grammar] model unavailable: $e');
+      debugPrint('[AuraScribe][Grammar] model unavailable: $e');
       return rawText;
     }
 
     if (model == null) return rawText;
 
-    debugPrint('[Dictator][Grammar] cleaning ${rawText.length} chars…');
+    debugPrint('[AuraScribe][Grammar] cleaning ${rawText.length} chars…');
 
     const systemPrompt =
         'You fix dictation transcripts from Indian English speakers. '
@@ -78,7 +78,7 @@ class GrammarService {
         originalText: rawText,
         grammarMode: true,
       );
-      debugPrint('[Dictator][Grammar] done → ${out.length} chars');
+      debugPrint('[AuraScribe][Grammar] done → ${out.length} chars');
       return out;
     } finally {
       await session.close();

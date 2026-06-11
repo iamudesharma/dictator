@@ -41,7 +41,7 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
     onProgress?.call();
     
     try {
-      debugPrint('[Dictator][Nemotron] Initializing sherpa-onnx bindings…');
+      debugPrint('[AuraScribe][Nemotron] Initializing sherpa-onnx bindings…');
       sherpa_onnx.initBindings();
 
       final supportDir = await getApplicationSupportDirectory();
@@ -61,7 +61,7 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
       }
 
       if (needsClean) {
-        debugPrint('[Dictator][Nemotron] Model repo change or stale files. Cleaning $modelDir…');
+        debugPrint('[AuraScribe][Nemotron] Model repo change or stale files. Cleaning $modelDir…');
         if (await modelDir.exists()) {
           await modelDir.delete(recursive: true);
         }
@@ -107,16 +107,16 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
         rule1MinTrailingSilence: 2.0,
       );
 
-      debugPrint('[Dictator][Nemotron] Initializing OnlineRecognizer…');
+      debugPrint('[AuraScribe][Nemotron] Initializing OnlineRecognizer…');
       _recognizer = sherpa_onnx.OnlineRecognizer(config);
       _warmUpRecognizer();
       _loaded = true;
       _statusMessage = '';
       onProgress?.call();
-      debugPrint('[Dictator][Nemotron] ✅ Ready.');
+      debugPrint('[AuraScribe][Nemotron] ✅ Ready.');
       return null;
     } catch (e) {
-      debugPrint('[Dictator][Nemotron] ❌ Loading failed: $e');
+      debugPrint('[AuraScribe][Nemotron] ❌ Loading failed: $e');
       _statusMessage = 'Error: $e';
       onProgress?.call();
       return 'Failed to load Nemotron: $e';
@@ -135,15 +135,15 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
     if (!await file.exists()) return '';
 
     try {
-      debugPrint('[Dictator][Nemotron] Reading WAV samples from $audioPath…');
+      debugPrint('[AuraScribe][Nemotron] Reading WAV samples from $audioPath…');
       final waveData = sherpa_onnx.readWave(audioPath);
 
       if (waveData.sampleRate == 0 || waveData.samples.isEmpty) {
-        debugPrint('[Dictator][Nemotron] Empty or invalid WAV file.');
+        debugPrint('[AuraScribe][Nemotron] Empty or invalid WAV file.');
         return '';
       }
 
-      debugPrint('[Dictator][Nemotron] Running inference (sampleRate: ${waveData.sampleRate}, samples: ${waveData.samples.length})…');
+      debugPrint('[AuraScribe][Nemotron] Running inference (sampleRate: ${waveData.sampleRate}, samples: ${waveData.samples.length})…');
       final stream = _recognizer!.createStream();
       stream.acceptWaveform(
         samples: waveData.samples,
@@ -160,10 +160,10 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
       final text = result.text.trim();
 
       stream.free();
-      debugPrint('[Dictator][Nemotron] Inference done: "$text"');
+      debugPrint('[AuraScribe][Nemotron] Inference done: "$text"');
       return text;
     } catch (e) {
-      debugPrint('[Dictator][Nemotron] Transcription failed: $e');
+      debugPrint('[AuraScribe][Nemotron] Transcription failed: $e');
       return '[Transcription error: $e]';
     } finally {
       await _deleteQuietly(file);
@@ -194,22 +194,22 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
         recognizer.decode(stream);
       }
       stream.free();
-      debugPrint('[Dictator][Nemotron] Warm-up decode complete');
+      debugPrint('[AuraScribe][Nemotron] Warm-up decode complete');
     } catch (e) {
-      debugPrint('[Dictator][Nemotron] Warm-up skipped: $e');
+      debugPrint('[AuraScribe][Nemotron] Warm-up skipped: $e');
     }
   }
 
   void startStream() {
     if (_recognizer == null) {
-      debugPrint('[Dictator][Nemotron] Cannot start stream: recognizer is null');
+      debugPrint('[AuraScribe][Nemotron] Cannot start stream: recognizer is null');
       return;
     }
     _activeStream?.free();
     _activeStream = _recognizer!.createStream();
     _currentText = '';
     _finalizedText = '';
-    debugPrint('[Dictator][Nemotron] True stream session started');
+    debugPrint('[AuraScribe][Nemotron] True stream session started');
   }
 
   void addAudioChunk(Uint8List pcmChunk) {
@@ -248,7 +248,7 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
         _currentText = _finalizedText.isEmpty ? activeText : '$_finalizedText $activeText';
       }
     } catch (e) {
-      debugPrint('[Dictator][Nemotron] Error during stream decode chunk: $e');
+      debugPrint('[AuraScribe][Nemotron] Error during stream decode chunk: $e');
     }
   }
 
@@ -275,10 +275,10 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
       final finalResult = _finalizedText.isEmpty 
           ? lastResult 
           : (lastResult.isEmpty ? _finalizedText : '$_finalizedText $lastResult');
-      debugPrint('[Dictator][Nemotron] True stream session ended. Final text: "$finalResult"');
+      debugPrint('[AuraScribe][Nemotron] True stream session ended. Final text: "$finalResult"');
       return finalResult.trim();
     } catch (e) {
-      debugPrint('[Dictator][Nemotron] Error ending stream: $e');
+      debugPrint('[AuraScribe][Nemotron] Error ending stream: $e');
       return _currentText;
     } finally {
       stream.free();
@@ -306,25 +306,25 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
           if (remoteLengthHeader != null) {
             final remoteLength = int.parse(remoteLengthHeader);
             if (localLength == remoteLength) {
-              debugPrint('[Dictator][Nemotron] $fileName already exists and matches remote size ($localLength bytes).');
+              debugPrint('[AuraScribe][Nemotron] $fileName already exists and matches remote size ($localLength bytes).');
               return;
             } else {
-              debugPrint('[Dictator][Nemotron] File size mismatch for $fileName (local: $localLength, remote: $remoteLength). Deleting and re-downloading…');
+              debugPrint('[AuraScribe][Nemotron] File size mismatch for $fileName (local: $localLength, remote: $remoteLength). Deleting and re-downloading…');
               await file.delete();
             }
           } else {
             // Cannot verify length, assume it is fine
-            debugPrint('[Dictator][Nemotron] $fileName already exists (cannot verify size, skipping download).');
+            debugPrint('[AuraScribe][Nemotron] $fileName already exists (cannot verify size, skipping download).');
             return;
           }
         } catch (e) {
-          debugPrint('[Dictator][Nemotron] HEAD check failed for $fileName: $e. Assuming existing file is fine.');
+          debugPrint('[AuraScribe][Nemotron] HEAD check failed for $fileName: $e. Assuming existing file is fine.');
           return;
         }
       }
     }
 
-    debugPrint('[Dictator][Nemotron] Downloading $url…');
+    debugPrint('[AuraScribe][Nemotron] Downloading $url…');
     _statusMessage = 'Downloading $fileName…';
     onProgress?.call();
 
@@ -352,7 +352,7 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
         }
       });
       await sink.close();
-      debugPrint('[Dictator][Nemotron] Saved file to $savePath');
+      debugPrint('[AuraScribe][Nemotron] Saved file to $savePath');
     } else {
       throw Exception('Failed to download $url (Status: ${response.statusCode})');
     }

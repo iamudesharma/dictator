@@ -54,7 +54,7 @@ class GemmaTranscriptionBackend implements SttBackend {
     onProgress?.call();
 
     try {
-      debugPrint('[Dictator][Gemma] Initializing flutter_gemma…');
+      debugPrint('[AuraScribe][Gemma] Initializing flutter_gemma…');
       await FlutterGemma.initialize();
 
       final supportDir = await getApplicationSupportDirectory();
@@ -73,7 +73,7 @@ class GemmaTranscriptionBackend implements SttBackend {
       }
 
       if (needsClean) {
-        debugPrint('[Dictator][Gemma] Repo change or stale files. Cleaning $modelDir…');
+        debugPrint('[AuraScribe][Gemma] Repo change or stale files. Cleaning $modelDir…');
         if (await modelDir.exists()) {
           await modelDir.delete(recursive: true);
         }
@@ -95,7 +95,7 @@ class GemmaTranscriptionBackend implements SttBackend {
       _statusMessage = 'Installing model…';
       onProgress?.call();
 
-      debugPrint('[Dictator][Gemma] Installing from file: $localPath');
+      debugPrint('[AuraScribe][Gemma] Installing from file: $localPath');
       await FlutterGemma.installModel(
         modelType: ModelType.gemma4,
         fileType: ModelFileType.litertlm,
@@ -104,7 +104,7 @@ class GemmaTranscriptionBackend implements SttBackend {
       _statusMessage = 'Loading into memory…';
       onProgress?.call();
 
-      debugPrint('[Dictator][Gemma] Loading into memory…');
+      debugPrint('[AuraScribe][Gemma] Loading into memory…');
       _model = await FlutterGemma.getActiveModel(
         maxTokens: 8192,
         supportAudio: true,
@@ -114,10 +114,10 @@ class GemmaTranscriptionBackend implements SttBackend {
       _loaded = true;
       _statusMessage = '';
       onProgress?.call();
-      debugPrint('[Dictator][Gemma] ✅ Ready (downloaded on demand, ~16 GB RAM recommended)');
+      debugPrint('[AuraScribe][Gemma] ✅ Ready (downloaded on demand, ~16 GB RAM recommended)');
       return null;
     } catch (e) {
-      debugPrint('[Dictator][Gemma] ❌ Load error: $e');
+      debugPrint('[AuraScribe][Gemma] ❌ Load error: $e');
       _statusMessage = 'Error: $e';
       onProgress?.call();
       return 'Failed to load Gemma: $e';
@@ -137,7 +137,7 @@ class GemmaTranscriptionBackend implements SttBackend {
     if (!await file.exists()) return '';
 
     final bytes = await file.length();
-    debugPrint('[Dictator][Gemma] transcribe: $audioPath ($bytes bytes)');
+    debugPrint('[AuraScribe][Gemma] transcribe: $audioPath ($bytes bytes)');
 
     const maxBytes = 3 * 1024 * 1024;
     if (bytes > maxBytes) {
@@ -155,7 +155,7 @@ class GemmaTranscriptionBackend implements SttBackend {
       );
       final response = await session.getResponse();
       final text = response.trim();
-      debugPrint('[Dictator][Gemma] done in ${sw.elapsedMilliseconds}ms');
+      debugPrint('[AuraScribe][Gemma] done in ${sw.elapsedMilliseconds}ms');
       return text;
     } finally {
       await session.close();
@@ -169,7 +169,7 @@ class GemmaTranscriptionBackend implements SttBackend {
       try {
         await _model!.close();
       } catch (e) {
-        debugPrint('[Dictator][Gemma] close: $e');
+        debugPrint('[AuraScribe][Gemma] close: $e');
       }
       _model = null;
     }
@@ -193,24 +193,24 @@ class GemmaTranscriptionBackend implements SttBackend {
           if (remoteLengthHeader != null) {
             final remoteLength = int.parse(remoteLengthHeader);
             if (localLength == remoteLength) {
-              debugPrint('[Dictator][Gemma] $fileName already exists and matches remote size ($localLength bytes).');
+              debugPrint('[AuraScribe][Gemma] $fileName already exists and matches remote size ($localLength bytes).');
               return;
             } else {
-              debugPrint('[Dictator][Gemma] File size mismatch for $fileName (local: $localLength, remote: $remoteLength). Deleting and re-downloading…');
+              debugPrint('[AuraScribe][Gemma] File size mismatch for $fileName (local: $localLength, remote: $remoteLength). Deleting and re-downloading…');
               await file.delete();
             }
           } else {
-            debugPrint('[Dictator][Gemma] $fileName already exists (cannot verify size, skipping download).');
+            debugPrint('[AuraScribe][Gemma] $fileName already exists (cannot verify size, skipping download).');
             return;
           }
         } catch (e) {
-          debugPrint('[Dictator][Gemma] HEAD check failed for $fileName: $e. Assuming existing file is fine.');
+          debugPrint('[AuraScribe][Gemma] HEAD check failed for $fileName: $e. Assuming existing file is fine.');
           return;
         }
       }
     }
 
-    debugPrint('[Dictator][Gemma] Downloading $url…');
+    debugPrint('[AuraScribe][Gemma] Downloading $url…');
     _statusMessage = 'Downloading $fileName…';
     onProgress?.call();
 
@@ -238,7 +238,7 @@ class GemmaTranscriptionBackend implements SttBackend {
         }
       });
       await sink.close();
-      debugPrint('[Dictator][Gemma] Saved file to $savePath');
+      debugPrint('[AuraScribe][Gemma] Saved file to $savePath');
     } else {
       throw Exception('Failed to download $url (Status: ${response.statusCode})');
     }

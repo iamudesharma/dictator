@@ -8,7 +8,7 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
 
     static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
-            name: "com.dictator/accessibility",
+            name: "com.aurascribe/accessibility",
             binaryMessenger: registrar.messenger
         )
         let instance = AccessibilityPlugin()
@@ -306,7 +306,7 @@ class HotkeyPlugin: NSObject, FlutterPlugin {
 
     static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
-            name: "com.dictator/hotkey",
+            name: "com.aurascribe/hotkey",
             binaryMessenger: registrar.messenger
         )
         let instance = HotkeyPlugin()

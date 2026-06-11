@@ -32,7 +32,7 @@ void main() async {
     backgroundColor: Color(0xFF1C1C1E),
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
-    title: 'Dictator Settings',
+    title: 'AuraScribe Settings',
     minimumSize: Size(420, 500),
   );
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -70,9 +70,9 @@ void main() async {
     final error = await transcriptionService.ensureLoaded();
     if (error == null) {
       grammarService.attachSttModel(transcriptionService.sharedGemmaModelForGrammar);
-      debugPrint('[Dictator] ✅ STT preloaded (${transcriptionService.modelLabel})');
+      debugPrint('[AuraScribe] ✅ STT preloaded (${transcriptionService.modelLabel})');
     } else {
-      debugPrint('[Dictator] STT preload skipped: $error');
+      debugPrint('[AuraScribe] STT preload skipped: $error');
     }
 
     // Whisper / Nemotron STT: preload lightweight Gemma 3 270M for grammar + Smart Commands.
@@ -80,9 +80,9 @@ void main() async {
     if (transcriptionService.sharedGemmaModelForGrammar == null) {
       try {
         await grammarModelService.ensureLoaded();
-        debugPrint('[Dictator] ✅ Gemma 3 270M preloaded (grammar + Smart Commands)');
+        debugPrint('[AuraScribe] ✅ Gemma 3 270M preloaded (grammar + Smart Commands)');
       } catch (e) {
-        debugPrint('[Dictator] Gemma 270M preload skipped: $e');
+        debugPrint('[AuraScribe] Gemma 270M preload skipped: $e');
       }
     }
   }());
@@ -127,7 +127,7 @@ void main() async {
   hotkeyService.onSmartCommandTriggered = () => orchestrator.triggerSmartCommand();
 
   // ── Run ────────────────────────────────────────────────
-  runApp(DictatorApp(
+  runApp(AuraScribeApp(
     orchestrator: orchestrator,
     settings: settings,
     hotkeyService: hotkeyService,
@@ -151,10 +151,10 @@ Future<void> _purgeStaleDictationWavs() async {
       }
     }
     if (removed > 0) {
-      debugPrint('[Dictator] Purged $removed stale dictation WAV(s)');
+      debugPrint('[AuraScribe] Purged $removed stale dictation WAV(s)');
     }
   } catch (e) {
-    debugPrint('[Dictator] WAV purge skipped: $e');
+    debugPrint('[AuraScribe] WAV purge skipped: $e');
   }
 }
 

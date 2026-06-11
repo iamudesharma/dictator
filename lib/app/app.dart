@@ -9,7 +9,7 @@ import '../accessibility/accessibility_service.dart';
 import '../grammar/grammar_service.dart';
 import '../transcription/transcription_service.dart';
 
-class DictatorApp extends StatelessWidget {
+class AuraScribeApp extends StatelessWidget {
   final DictationOrchestrator orchestrator;
   final SettingsService settings;
   final HotkeyService hotkeyService;
@@ -17,7 +17,7 @@ class DictatorApp extends StatelessWidget {
   final TranscriptionService transcriptionService;
   final GrammarService grammarService;
 
-  const DictatorApp({
+  const AuraScribeApp({
     super.key,
     required this.orchestrator,
     required this.settings,
@@ -30,7 +30,7 @@ class DictatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Dictator',
+      title: 'AuraScribe',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.dark(
@@ -39,7 +39,7 @@ class DictatorApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: DictatorHome(
+      home: AuraScribeHome(
         orchestrator: orchestrator,
         settings: settings,
         hotkeyService: hotkeyService,
@@ -51,7 +51,7 @@ class DictatorApp extends StatelessWidget {
   }
 }
 
-class DictatorHome extends StatelessWidget {
+class AuraScribeHome extends StatelessWidget {
   final DictationOrchestrator orchestrator;
   final SettingsService settings;
   final HotkeyService hotkeyService;
@@ -59,7 +59,7 @@ class DictatorHome extends StatelessWidget {
   final TranscriptionService transcriptionService;
   final GrammarService grammarService;
 
-  const DictatorHome({
+  const AuraScribeHome({
     super.key,
     required this.orchestrator,
     required this.settings,

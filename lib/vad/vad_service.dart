@@ -31,7 +31,7 @@ class VadService {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(_pollInterval, _tick);
     debugPrint(
-      '[Dictator][VAD] started (threshold=${_settings.vadThreshold} dBFS, '
+      '[AuraScribe][VAD] started (threshold=${_settings.vadThreshold} dBFS, '
       'silence=${_settings.vadSilenceDuration}ms, '
       'max=${_settings.maxRecordingSeconds}s)',
     );
@@ -43,7 +43,7 @@ class VadService {
     _silentMs = 0;
     _recordingMs = 0;
     _hasSpeech = false;
-    debugPrint('[Dictator][VAD] stopped');
+    debugPrint('[AuraScribe][VAD] stopped');
   }
 
   Future<void> _tick(Timer _) async {
@@ -52,7 +52,7 @@ class VadService {
       final maxMs = _settings.maxRecordingSeconds * 1000;
       if (_recordingMs >= maxMs) {
         debugPrint(
-          '[Dictator][VAD] max recording ${_settings.maxRecordingSeconds}s reached → stopping',
+          '[AuraScribe][VAD] max recording ${_settings.maxRecordingSeconds}s reached → stopping',
         );
         stop();
         onSilenceDetected?.call();
@@ -66,7 +66,7 @@ class VadService {
 
       if (!isSilent) {
         if (!_hasSpeech) {
-          debugPrint('[Dictator][VAD] speech detected (${current.toStringAsFixed(1)} dBFS)');
+          debugPrint('[AuraScribe][VAD] speech detected (${current.toStringAsFixed(1)} dBFS)');
         }
         _hasSpeech = true;
         _silentMs = 0;
@@ -74,7 +74,7 @@ class VadService {
         _silentMs += _pollInterval.inMilliseconds;
         if (_silentMs >= _settings.vadSilenceDuration) {
           debugPrint(
-            '[Dictator][VAD] silence ${_silentMs}ms after speech → triggering stop',
+            '[AuraScribe][VAD] silence ${_silentMs}ms after speech → triggering stop',
           );
           stop();
           onSilenceDetected?.call();

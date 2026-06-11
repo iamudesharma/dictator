@@ -1,6 +1,6 @@
-# Dictator — Offline macOS Voice Dictation App
+# AuraScribe — Offline macOS Voice Dictation App
 
-Dictator is a high-performance, fully offline macOS menu bar application built with Flutter. It implements a global system-wide dictation shortcut (e.g., double-tapping `Control`) that captures your voice, transcribes it on-device using one of three speech-to-text engines, refines the grammar and punctuation locally, and inserts the final text directly into your currently focused input field.
+AuraScribe is a high-performance, fully offline macOS menu bar application built with Flutter. It implements a global system-wide dictation shortcut (e.g., double-tapping `Control`) that captures your voice, transcribes it on-device using one of three speech-to-text engines, refines the grammar and punctuation locally, and inserts the final text directly into your currently focused input field.
 
 ---
 

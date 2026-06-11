@@ -42,9 +42,9 @@ class SmartCommandService {
     required String text,
     String? customPrompt,
   }) async {
-    debugPrint('[Dictator][SmartCommand] execute() entry: type = $type, text length = ${text.length}');
+    debugPrint('[AuraScribe][SmartCommand] execute() entry: type = $type, text length = ${text.length}');
     if (text.trim().isEmpty) {
-      debugPrint('[Dictator][SmartCommand] Text is empty, returning early');
+      debugPrint('[AuraScribe][SmartCommand] Text is empty, returning early');
       return text;
     }
 
@@ -56,7 +56,7 @@ class SmartCommandService {
         sttSharedModel: _transcription.sharedGemmaModelForGrammar,
       );
     } catch (e, stack) {
-      debugPrint('[Dictator][SmartCommand] Model load failed: $e\n$stack');
+      debugPrint('[AuraScribe][SmartCommand] Model load failed: $e\n$stack');
       return 'Error: Gemma model is unavailable ($e)';
     }
 
@@ -96,7 +96,7 @@ class SmartCommandService {
         break;
     }
 
-    debugPrint('[Dictator][SmartCommand] Executing $type on ${text.length} chars…');
+    debugPrint('[AuraScribe][SmartCommand] Executing $type on ${text.length} chars…');
 
     final session = await model.createSession();
     try {
@@ -105,10 +105,10 @@ class SmartCommandService {
       );
       final result = await session.getResponse();
       final out = LlmOutputSanitizer.clean(result, originalText: text);
-      debugPrint('[Dictator][SmartCommand] Completed → ${out.length} chars');
+      debugPrint('[AuraScribe][SmartCommand] Completed → ${out.length} chars');
       return out.isNotEmpty ? out : 'No response from model';
     } catch (e) {
-      debugPrint('[Dictator][SmartCommand] Execution error: $e');
+      debugPrint('[AuraScribe][SmartCommand] Execution error: $e');
       return 'Error executing command: $e';
     } finally {
       await session.close();
