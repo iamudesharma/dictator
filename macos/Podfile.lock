@@ -1,0 +1,74 @@
+PODS:
+  - ffmpeg_kit_flutter_new_min (7.1.1):
+    - ffmpeg_kit_flutter_new_min/min (= 7.1.1)
+    - FlutterMacOS
+  - ffmpeg_kit_flutter_new_min/min (7.1.1):
+    - FlutterMacOS
+  - flutter_gemma (0.14.0):
+    - FlutterMacOS
+  - FlutterMacOS (1.0.0)
+  - HotKey (0.2.1)
+  - hotkey_manager_macos (0.0.1):
+    - FlutterMacOS
+    - HotKey
+  - screen_retriever_macos (0.0.1):
+    - FlutterMacOS
+  - sherpa_onnx_macos (1.13.2):
+    - FlutterMacOS
+  - tray_manager (0.0.1):
+    - FlutterMacOS
+  - whisper_ggml (1.0.0):
+    - FlutterMacOS
+  - window_manager (0.2.0):
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - ffmpeg_kit_flutter_new_min (from `Flutter/ephemeral/.symlinks/plugins/ffmpeg_kit_flutter_new_min/macos`)
+  - flutter_gemma (from `Flutter/ephemeral/.symlinks/plugins/flutter_gemma/macos`)
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
+  - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
+  - sherpa_onnx_macos (from `Flutter/ephemeral/.symlinks/plugins/sherpa_onnx_macos/macos`)
+  - tray_manager (from `Flutter/ephemeral/.symlinks/plugins/tray_manager/macos`)
+  - whisper_ggml (from `Flutter/ephemeral/.symlinks/plugins/whisper_ggml/macos`)
+  - window_manager (from `Flutter/ephemeral/.symlinks/plugins/window_manager/macos`)
+
+SPEC REPOS:
+  trunk:
+    - HotKey
+
+EXTERNAL SOURCES:
+  ffmpeg_kit_flutter_new_min:
+    :path: Flutter/ephemeral/.symlinks/plugins/ffmpeg_kit_flutter_new_min/macos
+  flutter_gemma:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_gemma/macos
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  hotkey_manager_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos
+  screen_retriever_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos
+  sherpa_onnx_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/sherpa_onnx_macos/macos
+  tray_manager:
+    :path: Flutter/ephemeral/.symlinks/plugins/tray_manager/macos
+  whisper_ggml:
+    :path: Flutter/ephemeral/.symlinks/plugins/whisper_ggml/macos
+  window_manager:
+    :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
+
+SPEC CHECKSUMS:
+  ffmpeg_kit_flutter_new_min: 623d95fe4c00311175a10f9ab3efa312c266ead6
+  flutter_gemma: 6d2de93c6472b2509a7b585de171de2c3a4447b6
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
+  hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
+  screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
+  sherpa_onnx_macos: 371f5776e195ef2228e8493b20830cea30895d6d
+  tray_manager: a104b5c81b578d83f3c3d0f40a997c8b10810166
+  whisper_ggml: ecd12f8f61d882385061b161679f22e5518a1c60
+  window_manager: 1d01fa7ac65a6e6f83b965471b1a7fdd3f06166c
+
+PODFILE CHECKSUM: d08dc4ad4046c94ac5cd20f94226fbc561c5cedd
+
+COCOAPODS: 1.16.2
