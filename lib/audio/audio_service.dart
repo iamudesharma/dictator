@@ -17,7 +17,7 @@ class AudioService {
     final fileName = 'dictation_${DateTime.now().millisecondsSinceEpoch}';
     _currentPath = p.join(dir.path, fileName);
 
-    debugPrint('[Dictator][Audio] start → $_currentPath (16kHz mono, WAV encoder)');
+    debugPrint('[AuraScribe][Audio] start → $_currentPath (16kHz mono, WAV encoder)');
     await _recorder.start(
       const RecordConfig(
         encoder: AudioEncoder.wav,
@@ -27,12 +27,12 @@ class AudioService {
       ),
       path: _currentPath!,
     );
-    debugPrint('[Dictator][Audio] recording started');
+    debugPrint('[AuraScribe][Audio] recording started');
   }
 
   /// Starts streaming raw PCM audio chunks.
   Future<Stream<Uint8List>> startStream() async {
-    debugPrint('[Dictator][Audio] startStream → (16kHz mono, PCM 16-bit)');
+    debugPrint('[AuraScribe][Audio] startStream → (16kHz mono, PCM 16-bit)');
     _currentPath = 'stream';
     return _recorder.startStream(
       const RecordConfig(
@@ -47,12 +47,12 @@ class AudioService {
   /// Returns null if not recording.
   Future<String?> stop() async {
     if (!await _recorder.isRecording()) {
-      debugPrint('[Dictator][Audio] stop → not recording, returning null');
+      debugPrint('[AuraScribe][Audio] stop → not recording, returning null');
       return null;
     }
     final path = await _recorder.stop();
     _currentPath = null;
-    debugPrint('[Dictator][Audio] stop → saved: $path');
+    debugPrint('[AuraScribe][Audio] stop → saved: $path');
     return path;
   }
 

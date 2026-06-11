@@ -1,4 +1,4 @@
-# AGENTS.md — Dictator (voice_to_text)
+# AGENTS.md — AuraScribe (voice_to_text)
 
 ## What This Is
 
@@ -61,8 +61,8 @@ lib/
 ```
 
 **Platform channels:**
-- `com.dictator/accessibility` — AX text insertion, clipboard operations
-- `com.dictator/hotkey` — Native double/triple Control tap listener
+- `com.aurascribe/accessibility` — AX text insertion, clipboard operations
+- `com.aurascribe/hotkey` — Native double/triple Control tap listener
 
 **Native Swift code:** `macos/Runner/AccessibilityPlugin.swift` contains both `AccessibilityPlugin` and `HotkeyPlugin` classes. Registers in `MainFlutterWindow.swift`.
 
@@ -76,15 +76,15 @@ The test suite is minimal (smoke test only). The app requires live mic input, AX
 ```bash
 flutter build macos --release
 bash create_dmg.sh
-# Output: build/Dictator-v1.0.0.dmg (56 MB)
+# Output: build/AuraScribe-v1.0.0.dmg (56 MB)
 ```
 
 ### Upload to GitHub Releases
 1. Create a new release at `https://github.com/<your-repo>/releases/new`
 2. Tag: `v1.0.0`
-3. Upload `build/Dictator-v1.0.0.dmg` as release asset
+3. Upload `build/AuraScribe-v1.0.0.dmg` as release asset
 
 ### User Installation
-1. Open DMG → Drag `voice_to_text.app` to Applications
+1. Open DMG → Drag `AuraScribe.app` to Applications
 2. Right-click app → Open (bypasses Gatekeeper on first launch)
 3. Grant Accessibility permission when prompted (Settings → Privacy & Security → Accessibility)

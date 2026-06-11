@@ -45,9 +45,9 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
 
   void _handleSelect() {
     final type = _commands[_selectedIndex];
-    debugPrint('[Dictator][HUD] _handleSelect called: selectedIndex = $_selectedIndex, type = $type');
+    debugPrint('[AuraScribe][HUD] _handleSelect called: selectedIndex = $_selectedIndex, type = $type');
     if (type == SmartCommandType.custom) {
-      debugPrint('[Dictator][HUD] Custom command selected. Showing custom input.');
+      debugPrint('[AuraScribe][HUD] Custom command selected. Showing custom input.');
       setState(() {
         _showCustomInput = true;
       });
@@ -60,7 +60,7 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
   }
 
   void _executeCommand(SmartCommandType type, {String? customPrompt}) {
-    debugPrint('[Dictator][HUD] _executeCommand called: type = $type, customPrompt = $customPrompt');
+    debugPrint('[AuraScribe][HUD] _executeCommand called: type = $type, customPrompt = $customPrompt');
     widget.orchestrator.executeSmartCommand(
       type,
       customPrompt: customPrompt,

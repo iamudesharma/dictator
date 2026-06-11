@@ -82,7 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Dictator Settings',
+                  'AuraScribe Settings',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -505,7 +505,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── About ────────────────────────────────────────
             Center(
               child: Text(
-                'Dictator v1.0  ·  Gemma or Whisper STT  ·  Optional grammar',
+                'AuraScribe v1.0  ·  Gemma or Whisper STT  ·  Optional grammar',
                 style: const TextStyle(color: Colors.white24, fontSize: 11),
               ),
             ),

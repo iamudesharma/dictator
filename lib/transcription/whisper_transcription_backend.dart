@@ -56,14 +56,14 @@ class WhisperTranscriptionBackend implements SttBackend {
 
     _loading = true;
     try {
-      debugPrint('[Dictator][Whisper] Preparing ggml-${model.modelName}.bin…');
+      debugPrint('[AuraScribe][Whisper] Preparing ggml-${model.modelName}.bin…');
       final path = await _whisper.downloadModel(model);
       _cachedModel = model;
       _loaded = true;
-      debugPrint('[Dictator][Whisper] ✅ Ready at $path');
+      debugPrint('[AuraScribe][Whisper] ✅ Ready at $path');
       return null;
     } catch (e) {
-      debugPrint('[Dictator][Whisper] ❌ Load error: $e');
+      debugPrint('[AuraScribe][Whisper] ❌ Load error: $e');
       return 'Failed to load Whisper: $e';
     } finally {
       _loading = false;
@@ -88,17 +88,17 @@ class WhisperTranscriptionBackend implements SttBackend {
     if (!await file.exists()) return '';
 
     final bytes = await file.length();
-    debugPrint('[Dictator][Whisper] transcribe: $audioPath ($bytes bytes)');
+    debugPrint('[AuraScribe][Whisper] transcribe: $audioPath ($bytes bytes)');
 
     if (bytes < 1000) {
-      debugPrint('[Dictator][Whisper] Audio file too small ($bytes bytes), skipping transcription');
+      debugPrint('[AuraScribe][Whisper] Audio file too small ($bytes bytes), skipping transcription');
       await _deleteQuietly(file);
       return '';
     }
 
     const maxBytes = 3 * 1024 * 1024;
     if (bytes > maxBytes) {
-      debugPrint('[Dictator][Whisper] Audio file too large ($bytes bytes), skipping transcription');
+      debugPrint('[AuraScribe][Whisper] Audio file too large ($bytes bytes), skipping transcription');
       await _deleteQuietly(file);
       return '';
     }
@@ -110,7 +110,7 @@ class WhisperTranscriptionBackend implements SttBackend {
         lang: 'en',
       );
       final text = result?.transcription.text.trim() ?? '';
-      debugPrint('[Dictator][Whisper] done in ${sw.elapsedMilliseconds}ms');
+      debugPrint('[AuraScribe][Whisper] done in ${sw.elapsedMilliseconds}ms');
       return text;
     } finally {
       await _deleteQuietly(file);

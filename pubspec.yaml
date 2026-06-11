@@ -1,5 +1,5 @@
 name: voice_to_text
-description: "Dictator — offline macOS dictation (Gemma or Whisper STT + optional grammar)"
+description: "AuraScribe — offline macOS dictation (Gemma or Whisper STT + optional grammar)"
 publish_to: 'none'
 version: 1.0.0+1
 

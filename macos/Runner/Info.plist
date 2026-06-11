@@ -35,10 +35,10 @@
 
 	<!-- Microphone access for recording audio -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Dictator needs microphone access to record your voice for transcription.</string>
+	<string>AuraScribe needs microphone access to record your voice for transcription.</string>
 
 	<!-- Speech recognition usage (for Siri/system prompt if needed) -->
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Dictator uses on-device speech recognition to transcribe your voice locally.</string>
+	<string>AuraScribe uses on-device speech recognition to transcribe your voice locally.</string>
 </dict>
 </plist>

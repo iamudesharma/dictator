@@ -2,9 +2,9 @@
 # Creates a DMG installer for Dictator
 set -euo pipefail
 
-APP_NAME="voice_to_text"
+APP_NAME="AuraScribe"
 BUILD_DIR="build/macos/Build/Products/Release"
-DMG_NAME="Dictator-v1.0.0.dmg"
+DMG_NAME="AuraScribe-v1.0.0.dmg"
 DMG_OUTPUT="build/${DMG_NAME}"
 TEMP_DIR="build/dmg_staging"
 
@@ -19,7 +19,7 @@ ln -s /Applications "${TEMP_DIR}/Applications"
 
 echo "💿 Creating DMG..."
 hdiutil create \
-  -volname "Dictator" \
+  -volname "AuraScribe" \
   -srcfolder "${TEMP_DIR}" \
   -ov \
   -format UDZO \

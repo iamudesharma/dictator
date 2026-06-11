@@ -125,7 +125,7 @@ class TranscriptionService extends ChangeNotifier {
     _activeEngine = engine;
     await _settings.setSttEngineIndex(engine.index);
     final error = await _loadActive();
-    if (error != null) debugPrint('[Dictator] switchEngine: $error');
+    if (error != null) debugPrint('[AuraScribe] switchEngine: $error');
     notifyListeners();
   }
 
@@ -145,7 +145,7 @@ class TranscriptionService extends ChangeNotifier {
     if (!backend.isLoaded) {
       final error = await backend.load();
       if (error != null) {
-        debugPrint('[Dictator] lazy load failed: $error');
+        debugPrint('[AuraScribe] lazy load failed: $error');
         return '[Model not loaded — please wait for initialization]';
       }
       notifyListeners();

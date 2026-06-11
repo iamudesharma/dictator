@@ -93,9 +93,9 @@ class DictationOrchestrator extends ChangeNotifier {
 
   /// Called by HotkeyService or tray menu tap.
   Future<void> toggle() async {
-    debugPrint('[Dictator] toggle() called — current state: $_state');
+    debugPrint('[AuraScribe] toggle() called — current state: $_state');
     if (_state == DictationState.recording) {
-      debugPrint('[Dictator] → stopping recording (manual toggle)');
+      debugPrint('[AuraScribe] → stopping recording (manual toggle)');
       await _stopAndProcess();
     } else if (_state == DictationState.idle || _state == DictationState.error) {
       // Lazily load the STT model on first use so the app starts instantly
@@ -108,18 +108,18 @@ class DictationOrchestrator extends ChangeNotifier {
           return;
         }
         _grammar.attachSttModel(_transcription.sharedGemmaModelForGrammar);
-        debugPrint('[Dictator] ✅ STT ready (${_transcription.modelLabel})');
+        debugPrint('[AuraScribe] ✅ STT ready (${_transcription.modelLabel})');
       }
-      debugPrint('[Dictator] → starting recording');
+      debugPrint('[AuraScribe] → starting recording');
       await _startRecording();
     } else {
-      debugPrint('[Dictator] ⏭️ Ignoring toggle while busy ($_state)');
+      debugPrint('[AuraScribe] ⏭️ Ignoring toggle while busy ($_state)');
     }
   }
 
   Future<void> _startRecording() async {
     final axGranted = await _accessibility.hasPermission();
-    debugPrint('[Dictator] Accessibility permission at record start: $axGranted');
+    debugPrint('[AuraScribe] Accessibility permission at record start: $axGranted');
 
     final isVisible = await windowManager.isVisible();
     final showHudOverlay = _settings.dictationMode != DictationMode.liveTyping;
@@ -197,7 +197,7 @@ class DictationOrchestrator extends ChangeNotifier {
                 notifyListeners();
               }
             } catch (e) {
-              debugPrint('[Dictator] Streaming transcription error: $e');
+              debugPrint('[AuraScribe] Streaming transcription error: $e');
             } finally {
               _isStreamingTranscribing = false;
             }
@@ -216,20 +216,20 @@ class DictationOrchestrator extends ChangeNotifier {
     // speech at activation time is not lost to startup latency.
     _setState(DictationState.recording);
     unawaited(SoundService.playStart());
-    debugPrint('[Dictator] Recording + VAD active');
+    debugPrint('[AuraScribe] Recording + VAD active');
   }
 
   void _onSilenceDetected() {
-    debugPrint('[Dictator] VAD silence detected — auto-stopping');
+    debugPrint('[AuraScribe] VAD silence detected — auto-stopping');
     _stopAndProcess();
   }
 
   Future<void> _stopAndProcess() async {
     if (_state != DictationState.recording) {
-      debugPrint('[Dictator] _stopAndProcess skipped — state is $_state (not recording)');
+      debugPrint('[AuraScribe] _stopAndProcess skipped — state is $_state (not recording)');
       return;
     }
-    debugPrint('[Dictator] _stopAndProcess started');
+    debugPrint('[AuraScribe] _stopAndProcess started');
     _vad.stop();
 
     _streamingTimer?.cancel();
@@ -247,7 +247,7 @@ class DictationOrchestrator extends ChangeNotifier {
       await _audio.stop(); // Stops internal recorder state
 
       if (pcmBytes.length < 1000) {
-        debugPrint('[Dictator] ❌ Stream too short, going idle');
+        debugPrint('[AuraScribe] ❌ Stream too short, going idle');
         if (_transcription.supportsTrueStreaming) {
           await _transcription.endStream();
         }
@@ -266,22 +266,22 @@ class DictationOrchestrator extends ChangeNotifier {
         final finalWavFile = File(p.join(tempDir.path, 'dictation_final_${DateTime.now().millisecondsSinceEpoch}.wav'));
         await finalWavFile.writeAsBytes(fullWav);
         wavPath = finalWavFile.path;
-        debugPrint('[Dictator] WAV saved: $wavPath');
+        debugPrint('[AuraScribe] WAV saved: $wavPath');
       }
     } else {
       wavPath = await _audio.stop();
       if (wavPath == null) {
-        debugPrint('[Dictator] ❌ No WAV file — recorder returned null, going idle');
+        debugPrint('[AuraScribe] ❌ No WAV file — recorder returned null, going idle');
         _setState(DictationState.idle);
         return;
       }
       await SoundService.playStop();
-      debugPrint('[Dictator] WAV saved: $wavPath');
+      debugPrint('[AuraScribe] WAV saved: $wavPath');
     }
 
     _setState(DictationState.transcribing);
     debugPrint(
-      '[Dictator] Transcribing… model loaded=${_transcription.isLoaded}, '
+      '[AuraScribe] Transcribing… model loaded=${_transcription.isLoaded}, '
       'loading=${_transcription.isLoading}',
     );
     String transcript;
@@ -292,18 +292,18 @@ class DictationOrchestrator extends ChangeNotifier {
         transcript = await _transcription.transcribe(wavPath!);
       }
     } catch (e, st) {
-      debugPrint('[Dictator] ❌ Transcription exception: $e\n$st');
+      debugPrint('[AuraScribe] ❌ Transcription exception: $e\n$st');
       _setError('Transcription failed: $e');
       return;
     }
 
     debugPrint(
-      '[Dictator] Transcript received (${transcript.length} chars): '
+      '[AuraScribe] Transcript received (${transcript.length} chars): '
       '"${transcript.length > 120 ? '${transcript.substring(0, 120)}…' : transcript}"',
     );
 
     if (transcript.isEmpty) {
-      debugPrint('[Dictator] ⏭️ Empty transcript — skipping grammar & insert');
+      debugPrint('[AuraScribe] ⏭️ Empty transcript — skipping grammar & insert');
       _setState(DictationState.idle);
       return;
     }
@@ -321,7 +321,7 @@ class DictationOrchestrator extends ChangeNotifier {
     }
 
     if (transcript.startsWith('[Model not loaded')) {
-      debugPrint('[Dictator] ⚠️ Placeholder transcript — model was not ready');
+      debugPrint('[AuraScribe] ⚠️ Placeholder transcript — model was not ready');
     }
 
     _setState(DictationState.grammarCleanup);
@@ -329,35 +329,35 @@ class DictationOrchestrator extends ChangeNotifier {
     try {
       cleaned = await _grammar.clean(transcript);
       debugPrint(
-        '[Dictator] Grammar done (${cleaned.length} chars): '
+        '[AuraScribe] Grammar done (${cleaned.length} chars): '
         '"${cleaned.length > 120 ? '${cleaned.substring(0, 120)}…' : cleaned}"',
       );
     } catch (e, st) {
-      debugPrint('[Dictator] ⚠️ Grammar failed, using raw transcript: $e\n$st');
+      debugPrint('[AuraScribe] ⚠️ Grammar failed, using raw transcript: $e\n$st');
       cleaned = transcript;
     }
     _lastTranscript = cleaned;
 
     _setState(DictationState.inserting);
-    debugPrint('[Dictator] Inserting ${cleaned.length} chars into focused app…');
+    debugPrint('[AuraScribe] Inserting ${cleaned.length} chars into focused app…');
     try {
       final usedAx = await _accessibility.insertText(cleaned);
       _usedFallback = !usedAx;
       if (usedAx) {
-        debugPrint('[Dictator] ✅ Insert via Accessibility API (AX)');
+        debugPrint('[AuraScribe] ✅ Insert via Accessibility API (AX)');
       } else {
         debugPrint(
-          '[Dictator] ⚠️ Insert used clipboard + ⌘V fallback '
+          '[AuraScribe] ⚠️ Insert used clipboard + ⌘V fallback '
           '(check Accessibility permission & focused text field)',
         );
       }
     } catch (e, st) {
-      debugPrint('[Dictator] ❌ Insert exception: $e\n$st');
+      debugPrint('[AuraScribe] ❌ Insert exception: $e\n$st');
       _setError('Text insertion failed: $e');
       return;
     }
 
-    debugPrint('[Dictator] ✅ Dictation pipeline complete');
+    debugPrint('[AuraScribe] ✅ Dictation pipeline complete');
     _setState(DictationState.idle);
     SoundService.playSuccess();
   }
@@ -365,12 +365,12 @@ class DictationOrchestrator extends ChangeNotifier {
   // ── Smart Commands (Phase 5) ───────────────────────────
 
   Future<void> triggerSmartCommand() async {
-    debugPrint('[Dictator] triggerSmartCommand() called');
+    debugPrint('[AuraScribe] triggerSmartCommand() called');
 
     // 1. Grab selected text natively
     final text = await _accessibility.copySelectedText();
     if (text == null || text.trim().isEmpty) {
-      debugPrint('[Dictator] Grabbed selected text is empty, skipping HUD');
+      debugPrint('[AuraScribe] Grabbed selected text is empty, skipping HUD');
       _setError('No text selected! Highlight text first.');
       Timer(const Duration(milliseconds: 2500), () {
         if (_state == DictationState.error) {
@@ -382,7 +382,7 @@ class DictationOrchestrator extends ChangeNotifier {
 
     _selectedTextToProcess = text;
     _smartCommandError = null;
-    debugPrint('[Dictator] Grabbed selected text: "$_selectedTextToProcess"');
+    debugPrint('[AuraScribe] Grabbed selected text: "$_selectedTextToProcess"');
 
     // 2. Change view
     _currentView = AppView.smartCommands;
@@ -398,7 +398,7 @@ class DictationOrchestrator extends ChangeNotifier {
   }
 
   Future<void> closeSmartCommandHUD() async {
-    debugPrint('[Dictator] closeSmartCommandHUD() called');
+    debugPrint('[AuraScribe] closeSmartCommandHUD() called');
     await windowManager.hide();
     await windowManager.setSize(const Size(480, 640));
     await windowManager.setResizable(true);
@@ -409,9 +409,9 @@ class DictationOrchestrator extends ChangeNotifier {
   }
 
   Future<void> executeSmartCommand(SmartCommandType type, {String? customPrompt}) async {
-    debugPrint('[Dictator][Orchestrator] executeSmartCommand entry: type = $type, customPrompt = $customPrompt');
+    debugPrint('[AuraScribe][Orchestrator] executeSmartCommand entry: type = $type, customPrompt = $customPrompt');
     if (_selectedTextToProcess == null || _selectedTextToProcess!.trim().isEmpty) {
-      debugPrint('[Dictator][Orchestrator] No selected text to process (is null or empty), closing');
+      debugPrint('[AuraScribe][Orchestrator] No selected text to process (is null or empty), closing');
       await closeSmartCommandHUD();
       return;
     }
@@ -421,19 +421,19 @@ class DictationOrchestrator extends ChangeNotifier {
     notifyListeners();
 
     final text = _selectedTextToProcess!;
-    debugPrint('[Dictator][Orchestrator] Executing Smart Command $type on target text length: ${text.length} chars. Text content: "$text"');
+    debugPrint('[AuraScribe][Orchestrator] Executing Smart Command $type on target text length: ${text.length} chars. Text content: "$text"');
 
     String result;
     try {
-      debugPrint('[Dictator][Orchestrator] Calling _smartCommand.execute...');
+      debugPrint('[AuraScribe][Orchestrator] Calling _smartCommand.execute...');
       result = await _smartCommand.execute(
         type: type,
         text: text,
         customPrompt: customPrompt,
       );
-      debugPrint('[Dictator][Orchestrator] _smartCommand.execute completed. Result length: ${result.length} chars. Result content: "$result"');
+      debugPrint('[AuraScribe][Orchestrator] _smartCommand.execute completed. Result length: ${result.length} chars. Result content: "$result"');
     } catch (e, stack) {
-      debugPrint('[Dictator][Orchestrator] Smart Command execution crashed: $e\n$stack');
+      debugPrint('[AuraScribe][Orchestrator] Smart Command execution crashed: $e\n$stack');
       result = 'Error executing command: $e';
     }
 
@@ -441,25 +441,25 @@ class DictationOrchestrator extends ChangeNotifier {
     notifyListeners();
 
     if (result.startsWith('Error:') || result.startsWith('Error executing')) {
-      debugPrint('[Dictator][Orchestrator] Command resulted in error: $result');
+      debugPrint('[AuraScribe][Orchestrator] Command resulted in error: $result');
       _smartCommandError = result;
       notifyListeners();
       SoundService.playError();
       return;
     }
 
-    debugPrint('[Dictator][Orchestrator] Closing Smart Command HUD to restore target app focus...');
+    debugPrint('[AuraScribe][Orchestrator] Closing Smart Command HUD to restore target app focus...');
     await closeSmartCommandHUD();
 
-    debugPrint('[Dictator][Orchestrator] Replacing selected text in target app...');
+    debugPrint('[AuraScribe][Orchestrator] Replacing selected text in target app...');
     final usedAx = await _accessibility.replaceSelectedText(result);
-    debugPrint('[Dictator][Orchestrator] replaceSelectedText outcome (usedAx) = $usedAx');
+    debugPrint('[AuraScribe][Orchestrator] replaceSelectedText outcome (usedAx) = $usedAx');
     if (usedAx) {
-      debugPrint('[Dictator][Orchestrator] Text replacement via accessibility succeeded.');
+      debugPrint('[AuraScribe][Orchestrator] Text replacement via accessibility succeeded.');
       SoundService.playSuccess();
     } else {
       debugPrint(
-        '[Dictator][Orchestrator] Text replacement used clipboard paste fallback.',
+        '[AuraScribe][Orchestrator] Text replacement used clipboard paste fallback.',
       );
       SoundService.playSuccess();
     }
@@ -479,7 +479,7 @@ class DictationOrchestrator extends ChangeNotifier {
 
   void _setState(DictationState newState) {
     if (_state != newState) {
-      debugPrint('[Dictator] State: $_state → $newState');
+      debugPrint('[AuraScribe] State: $_state → $newState');
     }
     _state = newState;
     _errorMessage = null;
@@ -540,7 +540,7 @@ class DictationOrchestrator extends ChangeNotifier {
   }
 
   void _setError(String msg) {
-    debugPrint('[Dictator] ❌ Error state: $msg');
+    debugPrint('[AuraScribe] ❌ Error state: $msg');
     _state = DictationState.error;
     _errorMessage = msg;
     _tray.updateState(DictationState.error);

@@ -6,7 +6,7 @@ import '../settings/settings_service.dart';
 typedef HotkeyTriggeredCallback = void Function();
 
 class HotkeyService {
-  static const _channel = MethodChannel('com.dictator/hotkey');
+  static const _channel = MethodChannel('com.aurascribe/hotkey');
   
   final SettingsService _settings;
   HotkeyTriggeredCallback? onTriggered;
@@ -20,7 +20,7 @@ class HotkeyService {
   Future<void> init() async {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onHotkeyTriggered') {
-        debugPrint('[Dictator][Hotkey] native hotkey triggered');
+        debugPrint('[AuraScribe][Hotkey] native hotkey triggered');
         onTriggered?.call();
       }
       return null;
@@ -43,11 +43,11 @@ class HotkeyService {
       modifiers: [HotKeyModifier.control, HotKeyModifier.shift],
       scope: HotKeyScope.system,
     );
-    debugPrint('[Dictator][Hotkey] registering global Control+Shift+C for Smart Commands');
+    debugPrint('[AuraScribe][Hotkey] registering global Control+Shift+C for Smart Commands');
     await hotKeyManager.register(
       _smartCommandHotKey!,
       keyDownHandler: (_) {
-        debugPrint('[Dictator][Hotkey] Control+Shift+C triggered');
+        debugPrint('[AuraScribe][Hotkey] Control+Shift+C triggered');
         onSmartCommandTriggered?.call();
       },
     );
@@ -62,12 +62,12 @@ class HotkeyService {
       // Start native macOS double/triple Ctrl listener
       try {
         final count = type == 0 ? 2 : 3;
-        debugPrint('[Dictator][Hotkey] native Ctrl×$count listener starting');
+        debugPrint('[AuraScribe][Hotkey] native Ctrl×$count listener starting');
         await _channel.invokeMethod('startListening', {
           'targetCount': count,
         });
       } catch (e) {
-        debugPrint('[Dictator][Hotkey] ❌ Failed to start native listening: $e');
+        debugPrint('[AuraScribe][Hotkey] ❌ Failed to start native listening: $e');
       }
     } else {
       // Stop native listener
@@ -82,11 +82,11 @@ class HotkeyService {
         scope: HotKeyScope.system,
       );
       
-      debugPrint('[Dictator][Hotkey] registered Cmd+Shift+Space');
+      debugPrint('[AuraScribe][Hotkey] registered Cmd+Shift+Space');
       await hotKeyManager.register(
         _registeredHotKey!,
         keyDownHandler: (_) {
-          debugPrint('[Dictator][Hotkey] Cmd+Shift+Space triggered');
+          debugPrint('[AuraScribe][Hotkey] Cmd+Shift+Space triggered');
           onTriggered?.call();
         },
       );

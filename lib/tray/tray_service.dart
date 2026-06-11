@@ -9,7 +9,7 @@ class TrayService with TrayListener {
   Future<void> init() async {
     trayManager.addListener(this);
     await trayManager.setIcon('assets/tray_icon.png');
-    await trayManager.setToolTip('Dictator');
+    await trayManager.setToolTip('AuraScribe');
     await _buildMenu(DictationState.idle);
   }
 
@@ -69,9 +69,9 @@ class TrayService with TrayListener {
       ),
       MenuItem.separator(),
       MenuItem(key: 'settings', label: 'Settings…'),
-      MenuItem(key: 'about', label: 'About Dictator'),
+      MenuItem(key: 'about', label: 'About AuraScribe'),
       MenuItem.separator(),
-      MenuItem(key: 'quit', label: 'Quit Dictator'),
+      MenuItem(key: 'quit', label: 'Quit AuraScribe'),
     ]));
   }
 
