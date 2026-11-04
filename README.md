@@ -161,3 +161,15 @@ optional audio driver requires an explicit administrator action. Signed update i
 requires a newer Developer ID signed release. Live permissions/audio and older macOS support
 still require acceptance; see the [sequential implementation checklist](docs/implementation-checklist.md)
 and [storage, runtime and validation guide](docs/hex-redesign.md).
+
+### Memory controls
+
+General → Memory enables release of unused models (on by default). Moonshine
+runs in a short-lived worker in low-memory mode; turn this off to keep its model
+warm for faster repeated dictation. Other resident speech/text models unload
+when idle (default: one minute). Active work is protected from unloading.
+Settings UI is released while hidden, preserving page drafts and modal edits.
+
+Model weights remain in the project-local `.aurascribe/models/` directory.
+No extra model download is needed for these memory changes. Measurement evidence,
+tradeoffs and opt-in probes are in [docs/memory-results.md](docs/memory-results.md).

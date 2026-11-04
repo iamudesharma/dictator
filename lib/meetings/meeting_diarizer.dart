@@ -51,18 +51,25 @@ List<SpeakerSpan> _runDiarizer(
               model: embedding, numThreads: 2, debug: false),
           clustering: sherpa.FastClusteringConfig(
               numClusters: speakers, threshold: 0.5)));
-  final wave = sherpa.readWave(wav);
-  if (wave.sampleRate != diarizer.sampleRate || wave.samples.isEmpty) {
-    diarizer.free();
-    throw StateError('Diarization requires a nonempty 16 kHz WAV.');
-  }
-  final samples = calloc<Float>(wave.samples.length);
+  Pointer<SherpaOnnxWave> wave = nullptr;
   Pointer<SherpaOnnxOfflineSpeakerDiarizationResult> result = nullptr;
   Pointer<SherpaOnnxOfflineSpeakerDiarizationSegment> segments = nullptr;
   try {
-    samples.asTypedList(wave.samples.length).setAll(0, wave.samples);
+    final filename = wav.toNativeUtf8();
+    try {
+      wave = SherpaOnnxBindings.readWave!.call(filename);
+    } finally {
+      calloc.free(filename);
+    }
+    if (wave == nullptr ||
+        wave.ref.sampleRate != diarizer.sampleRate ||
+        wave.ref.numSamples == 0) {
+      throw StateError('Diarization requires a nonempty 16 kHz WAV.');
+    }
+    // Use the native reader's PCM allocation directly; avoid a full Dart float
+    // copy plus a second native float copy for an hour-long meeting.
     result = SherpaOnnxBindings.sherpaOnnxOfflineSpeakerDiarizationProcess!
-        .call(diarizer.ptr, samples, wave.samples.length);
+        .call(diarizer.ptr, wave.ref.samples, wave.ref.numSamples);
     if (result == nullptr) throw StateError('Speaker diarization failed.');
     final count = SherpaOnnxBindings
         .sherpaOnnxOfflineSpeakerDiarizationResultGetNumSegments!
@@ -84,7 +91,7 @@ List<SpeakerSpan> _runDiarizer(
       SherpaOnnxBindings.sherpaOnnxOfflineSpeakerDiarizationDestroyResult!
           .call(result);
     }
-    calloc.free(samples);
+    if (wave != nullptr) SherpaOnnxBindings.freeWave!.call(wave);
     diarizer.free();
   }
 }

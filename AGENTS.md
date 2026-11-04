@@ -97,3 +97,22 @@ bash create_dmg.sh
 - Build optional components with `bash tool/build_transcribe_runtime.sh` and `bash tool/build_virtual_microphone.sh`. Building never installs the driver.
 - Model fixture checks are opt-in `dart run tool/verify_*.dart`; they download project-local weights. Standard tests mock native permission/device operations.
 - See `docs/implementation-checklist.md` for implementation status and manual hardware/signing gates. Do not describe compiled native paths as live-tested.
+
+## Memory policy
+
+- Low-memory mode defaults on (General → Memory): Moonshine uses the bundled
+  standalone Dart AOT `aurascribe-moonshine` worker per clip; the existing isolate
+  path is used for keep-warm mode or development builds without that worker.
+- `setup_aurascribe_runtime.sh` also builds/signs that worker from
+  `tool/moonshine_worker.dart`. Preserve it along with both existing runtime phases.
+- Shared `ModelMemoryPolicy` leases protect loads, recording, model operations,
+  grammar and external jobs from idle/OS-pressure cleanup. Other resident models
+  unload after 60 seconds by default; no forced production GC.
+- The settings MaterialApp is mounted on demand. Native close is prevented until
+  widget disposal has a frame, then the window hides. Drafts/modal editors survive;
+  a lightweight closed text client breaks Flutter's last-editor retention.
+- `tool/measure_memory.py` and `tool/benchmark_launch_memory.py` record project-local
+  metadata. `tool/verify_memory_lifecycle.dart` requires already-installed weights
+  and a supplied WAV; `tool/vm_heap_profile.dart` collects aggregate test allocations.
+- See `docs/memory-results.md`; fresh launch footprint is not transcription peak,
+  and app-only RSS excludes model worker processes.

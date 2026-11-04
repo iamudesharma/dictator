@@ -200,17 +200,18 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
   void _warmUpRecognizer() {
     final recognizer = _recognizer;
     if (recognizer == null) return;
+    final stream = recognizer.createStream();
     try {
-      final stream = recognizer.createStream();
       final silence = Float32List(8000); // 0.5 s @ 16 kHz
       stream.acceptWaveform(samples: silence, sampleRate: 16000);
       while (recognizer.isReady(stream)) {
         recognizer.decode(stream);
       }
-      stream.free();
       debugPrint('[AuraScribe][Nemotron] Warm-up decode complete');
     } catch (e) {
       debugPrint('[AuraScribe][Nemotron] Warm-up skipped: $e');
+    } finally {
+      stream.free();
     }
   }
 

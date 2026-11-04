@@ -38,6 +38,12 @@ class _MeetingsScreenState extends State<MeetingsScreen>
   @override
   void initState() {
     super.initState();
+    final drafts = widget.orchestrator.settingsDrafts;
+    title.text = drafts['meetingTitle'] ?? '';
+    _mic = drafts['meetingMic'] != 'false';
+    _system = drafts['meetingSystem'] != 'false';
+    _echo = drafts['meetingEcho'] != 'false';
+    _diarize = drafts['meetingDiarize'] == 'true';
     service.addListener(_refresh);
     _list();
   }
@@ -70,6 +76,13 @@ class _MeetingsScreenState extends State<MeetingsScreen>
   @override
   void dispose() {
     service.removeListener(_refresh);
+    widget.orchestrator.settingsDrafts.addAll({
+      'meetingTitle': title.text,
+      'meetingMic': '$_mic',
+      'meetingSystem': '$_system',
+      'meetingEcho': '$_echo',
+      'meetingDiarize': '$_diarize',
+    });
     title.dispose();
     super.dispose();
   }

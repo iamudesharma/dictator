@@ -8,9 +8,18 @@ class ModelBenchmark {
   ModelBenchmark(this.transcription);
   Future<Map<String, dynamic>> run(String samplePath) async {
     final input = File(samplePath);
-    final bytes = await input.readAsBytes();
-    if (bytes.length < 44 ||
-        bytes.length > 8 * 1024 * 1024 ||
+    final length = await input.length();
+    if (length < 44 || length > 8 * 1024 * 1024) {
+      throw const FormatException('Choose a short PCM WAV file, up to 8 MB.');
+    }
+    final reader = await input.open();
+    late List<int> bytes;
+    try {
+      bytes = await reader.read(12);
+    } finally {
+      await reader.close();
+    }
+    if (bytes.length < 12 ||
         ascii.decode(bytes.sublist(0, 4), allowInvalid: true) != 'RIFF' ||
         ascii.decode(bytes.sublist(8, 12), allowInvalid: true) != 'WAVE') {
       throw const FormatException('Choose a short PCM WAV file, up to 8 MB.');
@@ -22,7 +31,7 @@ class ModelBenchmark {
     final directory = await ProjectStorage.instance.directory('benchmarks');
     final copy = File(
         '${directory.path}/input-${DateTime.now().microsecondsSinceEpoch}.wav');
-    await copy.writeAsBytes(bytes);
+    await input.copy(copy.path);
     timer.reset();
     try {
       final text = await transcription.transcribe(copy.path);
@@ -32,7 +41,7 @@ class ModelBenchmark {
         'time': DateTime.now().toUtc().toIso8601String(),
         'loadMs': loadMs,
         'decodeMs': timer.elapsedMilliseconds,
-        'sampleBytes': bytes.length,
+        'sampleBytes': length,
         'transcript': text,
         'processRssBytes': ProcessInfo.currentRss,
         'processPeakRssBytes': ProcessInfo.maxRss,
@@ -52,12 +61,28 @@ class ModelBenchmark {
     final dir = await ProjectStorage.instance.directory('benchmarks');
     final file = File('${dir.path}/results.jsonl');
     if (!await file.exists()) return [];
-    return (await file.readAsLines())
-        .where((l) => l.trim().isNotEmpty)
-        .map((l) => Map<String, dynamic>.from(jsonDecode(l) as Map))
+    final reader = await file.open();
+    late String tail;
+    try {
+      final length = await reader.length();
+      final start = (length - 512 * 1024).clamp(0, length);
+      await reader.setPosition(start);
+      tail =
+          utf8.decode(await reader.read(length - start), allowMalformed: true);
+      if (start > 0) {
+        final newline = tail.indexOf('\n');
+        tail = newline < 0 ? '' : tail.substring(newline + 1);
+      }
+    } finally {
+      await reader.close();
+    }
+    return const LineSplitter()
+        .convert(tail)
+        .where((line) => line.trim().isNotEmpty)
         .toList()
         .reversed
         .take(20)
+        .map((line) => Map<String, dynamic>.from(jsonDecode(line) as Map))
         .toList();
   }
 }

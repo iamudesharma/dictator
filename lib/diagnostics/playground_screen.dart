@@ -31,6 +31,9 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
   @override
   void initState() {
     super.initState();
+    source.text = widget.orchestrator.settingsDrafts['playgroundSource'] ?? '';
+    application.text =
+        widget.orchestrator.settingsDrafts['playgroundApp'] ?? '*';
     ActivityLog.instance.addListener(_refresh);
   }
 
@@ -41,6 +44,8 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
   @override
   void dispose() {
     ActivityLog.instance.removeListener(_refresh);
+    widget.orchestrator.settingsDrafts['playgroundSource'] = source.text;
+    widget.orchestrator.settingsDrafts['playgroundApp'] = application.text;
     source.dispose();
     application.dispose();
     super.dispose();

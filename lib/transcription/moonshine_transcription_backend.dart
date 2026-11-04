@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
@@ -8,6 +10,22 @@ import 'stt_backend.dart';
 /// Quantized Moonshine Tiny v1, using sherpa's documented CPU pipeline.
 /// This is clip-based recognition, not the separate Moonshine Streaming model.
 class MoonshineTranscriptionBackend implements SttBackend {
+  MoonshineTranscriptionBackend({this.releaseAfterClip = false});
+  final bool releaseAfterClip;
+  Map<String, String>? _preparedPaths;
+  String? _helper, _library;
+  Process? _process;
+
+  Future<String?> _helperPath() async {
+    final resources = File(Platform.resolvedExecutable).parent.parent;
+    final bundled = File('${resources.path}/Resources/aurascribe-moonshine');
+    final local =
+        File('${ProjectStorage.instance.root.path}/tools/aurascribe-moonshine');
+    if (await bundled.exists()) return bundled.path;
+    if (await local.exists()) return local.path;
+    return null;
+  }
+
   static const revision = 'bf2b762c076d8ea61e2af0b3851c9564fb77552e';
   static const baseUrl =
       'https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/resolve/$revision';
@@ -17,7 +35,7 @@ class MoonshineTranscriptionBackend implements SttBackend {
   String _status = '';
   VoidCallback? onProgress;
   @override
-  bool get isLoaded => _port != null;
+  bool get isLoaded => _port != null || _preparedPaths != null;
   @override
   bool get isLoading => _loading;
   @override
@@ -47,6 +65,22 @@ class MoonshineTranscriptionBackend implements SttBackend {
               _status = value;
               onProgress?.call();
             });
+      }
+      if (releaseAfterClip) {
+        _helper = await _helperPath();
+        if (_helper != null) {
+          _preparedPaths = paths;
+          const configured = String.fromEnvironment('SHERPA_LIBRARY_DIR');
+          _library = configured.isNotEmpty
+              ? configured
+              : '${File(Platform.resolvedExecutable).parent.parent.path}/Frameworks';
+          if (!await File('$_library/libsherpa-onnx-c-api.dylib').exists()) {
+            _library =
+                '${ProjectStorage.instance.project.path}/build/macos/Build/Products/Release/AuraScribe.app/Contents/Frameworks';
+          }
+          _status = 'Ready • model memory released after each clip';
+          return null;
+        }
       }
       _status = 'Loading Moonshine on CPU…';
       onProgress?.call();
@@ -80,6 +114,7 @@ class MoonshineTranscriptionBackend implements SttBackend {
 
   @override
   Future<String> transcribe(String audioPath) async {
+    if (_preparedPaths != null) return _transcribeInProcess(audioPath);
     final port = _port;
     if (port == null) throw StateError('Moonshine is not loaded');
     final reply = ReceivePort();
@@ -97,8 +132,40 @@ class MoonshineTranscriptionBackend implements SttBackend {
     }
   }
 
+  Future<String> _transcribeInProcess(String audioPath) async {
+    if (_process != null) throw StateError('Moonshine is busy');
+    final folder = File(_preparedPaths!['tokens.txt']!).parent.path;
+    final process = _process =
+        await Process.start(_helper!, [_library!, folder, audioPath]);
+    final output = process.stdout.transform(utf8.decoder).join();
+    final errors = process.stderr.transform(utf8.decoder).join();
+    try {
+      final code = await process.exitCode.timeout(const Duration(minutes: 2));
+      final text = await output;
+      final diagnostic = await errors;
+      if (code != 0) {
+        throw StateError(
+            'Moonshine worker exited $code: ${diagnostic.length > 800 ? diagnostic.substring(0, 800) : diagnostic}');
+      }
+      return (jsonDecode(text) as Map)['text'] as String;
+    } finally {
+      process.kill();
+      await process.exitCode;
+      await Future.wait([output, errors]);
+      _process = null;
+      final file = File(audioPath);
+      if (await file.exists()) await file.delete();
+    }
+  }
+
   @override
   Future<void> dispose() async {
+    _preparedPaths = null;
+    final process = _process;
+    if (process != null) {
+      process.kill();
+      await process.exitCode;
+    }
     final port = _port;
     _port = null;
     if (port != null) {
@@ -123,6 +190,7 @@ void _moonshineWorker(List<Object> args) async {
   final library = args[2] as String;
   sherpa.OfflineRecognizer? recognizer;
   final commands = ReceivePort();
+  SendPort? shutdown;
   try {
     sherpa.initBindings(library.isEmpty ? null : library);
     recognizer = sherpa.OfflineRecognizer(sherpa.OfflineRecognizerConfig(
@@ -134,13 +202,14 @@ void _moonshineWorker(List<Object> args) async {
                 cachedDecoder: paths['cached_decode.int8.onnx']!),
             tokens: paths['tokens.txt']!,
             numThreads: 2,
-            provider: 'cpu')));
+            provider: 'cpu',
+            debug: false)));
     ready.send(commands.sendPort);
     await for (final message in commands) {
       final request = message as List;
       final reply = request[1] as SendPort;
       if (request[0] == null) {
-        reply.send(true);
+        shutdown = reply;
         break;
       }
       final stream = recognizer.createStream();
@@ -164,5 +233,6 @@ void _moonshineWorker(List<Object> args) async {
   } finally {
     recognizer?.free();
     commands.close();
+    shutdown?.send(true);
   }
 }

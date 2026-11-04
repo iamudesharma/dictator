@@ -1,3 +1,6 @@
+import 'shared/stt_engine.dart';
+import 'memory/memory_pressure_observer.dart';
+import 'memory/model_memory_policy.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -36,6 +39,7 @@ void main() async {
 
   // ── Window Manager ─────────────────────────────────────
   await windowManager.ensureInitialized();
+  await windowManager.setPreventClose(true);
   const WindowOptions windowOptions = WindowOptions(
     size: Size(960, 720),
     center: true,
@@ -63,11 +67,30 @@ void main() async {
 
   final audioService = AudioService(settings);
   final vadService = VadService(audioService, settings);
-  final transcriptionService = TranscriptionService(settings);
+  late TranscriptionService transcriptionService;
+  late GrammarService grammarService;
+  final memoryPolicy = ModelMemoryPolicy(
+    unload: () async {
+      await grammarService.releaseIdleResources();
+      await transcriptionService.releaseIdleResources();
+    },
+    enabled: settings.unloadIdleModels,
+    delay: Duration(seconds: settings.modelIdleSeconds),
+    onError: (error, stack) => debugPrint('Idle model cleanup failed: $error'),
+  );
+  final memoryObserver = MemoryPressureObserver(memoryPolicy);
+  WidgetsBinding.instance.addObserver(memoryObserver);
+  transcriptionService = TranscriptionService(settings, memory: memoryPolicy);
 
   // Shared single GrammarModelService instance to avoid double loading
   final grammarModelService = GrammarModelService(settings);
-  final grammarService = GrammarService(settings, () => grammarModelService);
+  grammarService = GrammarService(settings, () => grammarModelService,
+      memory: memoryPolicy, sharedModelProvider: () async {
+    if (transcriptionService.activeEngine != SttEngine.gemma) return null;
+    final error = await transcriptionService.ensureLoaded();
+    if (error != null) throw StateError(error);
+    return transcriptionService.sharedGemmaModelForGrammar;
+  });
   final smartCommandService = SmartCommandService(
     () => grammarModelService,
     transcriptionService,
@@ -132,6 +155,8 @@ void main() async {
           await orchestrator.voiceFilter.stop();
         }
         if (orchestrator.meetings.recording) await orchestrator.meetings.stop();
+        WidgetsBinding.instance.removeObserver(memoryObserver);
+        memoryPolicy.dispose();
         orchestrator.dispose();
         trayService.dispose();
         await trayManager.destroy();
@@ -184,6 +209,16 @@ Future<void> _purgeStaleDictationWavs() async {
       final name = p.basename(entity.path);
       if (name.startsWith('dictation_')) {
         await entity.delete();
+        removed++;
+      }
+    }
+    // Dedicated PCM spools may survive a crash. Only expire old files here,
+    // so a second developer launch cannot remove another process's recording.
+    final pcm = await ProjectStorage.instance.directory('tmp/pcm');
+    await for (final file in pcm.list()) {
+      if (file is File &&
+          DateTime.now().difference(await file.lastModified()).inHours >= 24) {
+        await file.delete();
         removed++;
       }
     }

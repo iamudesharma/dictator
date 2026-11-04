@@ -85,6 +85,14 @@ class SettingsService {
     _hfToken = token.trim();
   }
 
+  bool get unloadIdleModels => _prefs.getBool('unload_idle_models') ?? true;
+  int get modelIdleSeconds =>
+      (_prefs.getInt('model_idle_seconds') ?? 60).clamp(15, 3600);
+  Future<void> setUnloadIdleModels(bool value) =>
+      _prefs.setBool('unload_idle_models', value);
+  Future<void> setModelIdleSeconds(int value) =>
+      _prefs.setInt('model_idle_seconds', value.clamp(15, 3600));
+
   bool get preloadModel => _prefs.getBool('preload_model') ?? false;
   Future<void> setPreloadModel(bool value) =>
       _prefs.setBool('preload_model', value);

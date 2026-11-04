@@ -1,3 +1,4 @@
+import '../memory/detached_text_input.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -8,8 +9,6 @@ import '../meetings/meeting_service.dart';
 import '../capture/annotation_service.dart';
 import '../updates/update_service.dart';
 import '../diagnostics/activity_log.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../shared/dictation_state.dart';
@@ -25,7 +24,8 @@ import '../accessibility/live_text_inserter.dart';
 import '../tray/tray_service.dart';
 import '../shared/sound_service.dart';
 import '../shared/stt_engine.dart';
-import '../shared/wav_header_helper.dart';
+import '../audio/pcm_spool.dart';
+import '../storage/project_storage.dart';
 import '../grammar/smart_command_service.dart';
 import '../settings/settings_service.dart';
 
@@ -36,7 +36,7 @@ enum AppView {
 
 /// Central state machine for the dictation loop.
 /// Coordinates: recording → VAD → transcribe → grammar → insert
-class DictationOrchestrator extends ChangeNotifier {
+class DictationOrchestrator extends ChangeNotifier with WindowListener {
   final AudioService _audio;
   final _audioOutput = AudioOutputService();
   final VadService _vad;
@@ -60,7 +60,7 @@ class DictationOrchestrator extends ChangeNotifier {
 
   // Audio Streaming (Phase 6)
   StreamSubscription<Uint8List>? _audioSubscription;
-  final List<int> _audioBuffer = [];
+  PcmSpool? _pcmSpool;
   Timer? _streamingTimer;
   bool _isStreamingTranscribing = false;
   Completer<void>? _partialFinished;
@@ -70,6 +70,74 @@ class DictationOrchestrator extends ChangeNotifier {
   late LiveTextInserter _liveInserter =
       LiveTextInserter(_accessibility.insertText);
   Timer? _feedbackTimer;
+
+  bool _disposing = false;
+  @override
+  void notifyListeners() {
+    if (_disposing) return;
+    _transcription.memory?.setActive(
+        this,
+        _starting ||
+            _smartCommandRunning ||
+            _externalActivity != null ||
+            (_state != DictationState.idle && _state != DictationState.error));
+    super.notifyListeners();
+  }
+
+  @override
+  void onWindowClose() => unawaited(hideSettingsWindow());
+  @override
+  void onWindowMinimize() => setSettingsVisible(false);
+  @override
+  void onWindowRestore() => setSettingsVisible(true);
+  @override
+  void onWindowFocus() => setSettingsVisible(true);
+
+  bool settingsVisible = false;
+  final settingsTreeVisible = ValueNotifier(false);
+  int _settingsDialogs = 0;
+  final Map<String, String> settingsDrafts = {};
+
+  Future<T?> withSettingsDialog<T>(Future<T?> Function() show) async {
+    _settingsDialogs++;
+    _publishSettingsVisibility();
+    try {
+      return await show();
+    } finally {
+      _settingsDialogs--;
+      _publishSettingsVisibility();
+    }
+  }
+
+  void setSettingsVisible(bool visible) {
+    if (settingsVisible == visible) return;
+    settingsVisible = visible;
+    _publishSettingsVisibility();
+    notifyListeners();
+  }
+
+  void _publishSettingsVisibility() {
+    final keep = settingsVisible || _settingsDialogs > 0;
+    settingsTreeVisible.value = keep;
+    if (!keep) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!settingsTreeVisible.value && !_disposing) {
+          releaseDetachedTextInput(
+              WidgetsBinding.instance.platformDispatcher.implicitView?.viewId ??
+                  0);
+        }
+      });
+    }
+  }
+
+  Future<void> hideSettingsWindow() async {
+    setSettingsVisible(false);
+    // With preventClose enabled, disposal gets a frame before the native view
+    // becomes hidden and may stop scheduling Flutter frames.
+    await WidgetsBinding.instance.endOfFrame;
+    await windowManager.hide();
+  }
 
   bool get isStarting => _starting;
   bool _preparing = false, _cancelStarting = false, _startingFromHold = false;
@@ -175,11 +243,11 @@ class DictationOrchestrator extends ChangeNotifier {
         _tray = tray,
         _smartCommand = smartCommand,
         _settings = settings {
+    windowManager.addListener(this);
     _vad.onLevel = (value) {
       if (_state != DictationState.recording) return;
       _audioLevel = value;
       _syncIndicator();
-      notifyListeners();
     };
     _vad.onSilenceDetected = _onSilenceDetected;
     _vad.onMaxDuration = () => _stopAndProcess();
@@ -271,6 +339,8 @@ class DictationOrchestrator extends ChangeNotifier {
       _streamingTimer?.cancel();
       await _audioSubscription?.cancel();
       await _audio.cancel();
+      await _pcmSpool?.dispose();
+      _pcmSpool = null;
       _setError('Dictation could not start: $e');
     } finally {
       _preparing = false;
@@ -325,9 +395,9 @@ class DictationOrchestrator extends ChangeNotifier {
           _setError(error);
           return;
         }
-        _grammar.attachSttModel(_transcription.sharedGemmaModelForGrammar);
         debugPrint('[AuraScribe] ✅ STT ready (${_transcription.modelLabel})');
       }
+      _grammar.attachSttModel(_transcription.sharedGemmaModelForGrammar);
       if (_cancelStarting || (_startingFromHold && !_held)) {
         _setState(DictationState.idle);
         return;
@@ -378,7 +448,10 @@ class DictationOrchestrator extends ChangeNotifier {
         _transcription.activeEngine == SttEngine.nemotron ||
         _transcription.activeEngine == SttEngine.moonshine;
     if (useStreaming) {
-      _audioBuffer.clear();
+      await _pcmSpool?.dispose();
+      _pcmSpool = await PcmSpool.create(
+          await ProjectStorage.instance.directory('tmp/pcm'),
+          _settings.maxRecordingSeconds);
       _liveTranscript = '';
       try {
         final stream = await _audio.startStream();
@@ -387,9 +460,21 @@ class DictationOrchestrator extends ChangeNotifier {
         }
 
         _audioSubscription = stream.listen((chunk) {
-          _audioBuffer.addAll(chunk);
+          if (_state != DictationState.recording && !_preparing) return;
+          var full = false;
+          final before = _pcmSpool?.bytes ?? 0;
+          try {
+            full = _pcmSpool?.append(chunk) ?? false;
+          } catch (error) {
+            unawaited(_failAudioStream(error));
+            return;
+          }
           if (_transcription.supportsTrueStreaming) {
-            _transcription.addAudioChunk(chunk);
+            final accepted = (_pcmSpool?.bytes ?? before) - before;
+            if (accepted > 0) {
+              _transcription
+                  .addAudioChunk(Uint8List.sublistView(chunk, 0, accepted));
+            }
             _liveTranscript = _transcription.getLiveTranscript();
             if (dictationMode == DictationMode.liveTyping) {
               _enqueueLiveTypingDelta(
@@ -399,35 +484,31 @@ class DictationOrchestrator extends ChangeNotifier {
             }
             notifyListeners();
           }
-        });
+          if (full) unawaited(_stopAndProcess());
+        }, onError: (Object error) => unawaited(_failAudioStream(error)));
         _vad.start();
 
-        if (!_transcription.supportsTrueStreaming) {
+        if (!_transcription.supportsTrueStreaming &&
+            dictationMode == DictationMode.liveTyping) {
           _streamingTimer =
               Timer.periodic(const Duration(milliseconds: 800), (timer) async {
             if (_isStreamingTranscribing) return;
-            if (_audioBuffer.isEmpty) return;
+            if ((_pcmSpool?.bytes ?? 0) < 1000) return;
 
             _isStreamingTranscribing = true;
             _partialFinished = Completer<void>();
             try {
-              final pcmBytes = Uint8List.fromList(_audioBuffer);
-              if (pcmBytes.length < 1000) {
-                _isStreamingTranscribing = false;
-                return;
+              final directory =
+                  await ProjectStorage.instance.directory('tmp/pcm');
+              final tempFile = await _pcmSpool!.snapshot(File(
+                  '${directory.path}/partial-${DateTime.now().microsecondsSinceEpoch}.wav'));
+              String text;
+              try {
+                text = await _transcription.transcribe(tempFile.path);
+              } finally {
+                if (await tempFile.exists()) await tempFile.delete();
               }
 
-              final wavBytes = WavHeaderHelper.buildHeader(pcmBytes.length);
-              final fullWav = Uint8List(wavBytes.length + pcmBytes.length);
-              fullWav.setRange(0, wavBytes.length, wavBytes);
-              fullWav.setRange(wavBytes.length, fullWav.length, pcmBytes);
-
-              final tempDir = await getTemporaryDirectory();
-              final tempFile =
-                  File(p.join(tempDir.path, 'dictation_stream_tmp.wav'));
-              await tempFile.writeAsBytes(fullWav);
-
-              final text = await _transcription.transcribe(tempFile.path);
               if (text.isNotEmpty) {
                 _liveTranscript = text;
                 if (dictationMode == DictationMode.liveTyping) {
@@ -447,6 +528,8 @@ class DictationOrchestrator extends ChangeNotifier {
       } catch (e) {
         _vad.stop();
         await _audio.cancel();
+        await _pcmSpool?.dispose();
+        _pcmSpool = null;
         _setError('Failed to start streaming recorder: $e');
         return;
       }
@@ -462,6 +545,8 @@ class DictationOrchestrator extends ChangeNotifier {
       _audioSubscription = null;
       await _audio.cancel();
       await _audioOutput.end();
+      await _pcmSpool?.dispose();
+      _pcmSpool = null;
       _setState(DictationState.idle);
       return;
     }
@@ -479,7 +564,32 @@ class DictationOrchestrator extends ChangeNotifier {
     _stopAndProcess();
   }
 
+  Future<void> _failAudioStream(Object error) async {
+    if (_state != DictationState.recording) return;
+    _setState(DictationState.transcribing);
+    _vad.stop();
+    _streamingTimer?.cancel();
+    await _audioSubscription?.cancel();
+    await _partialFinished?.future;
+    await _audio.cancel();
+    await _pcmSpool?.dispose();
+    _pcmSpool = null;
+    _setError('Audio could not be buffered: $error');
+  }
+
   Future<void> _stopAndProcess() async {
+    if (_state != DictationState.recording) return;
+    try {
+      await _finishRecording();
+    } catch (error) {
+      _setError('Dictation failed: $error');
+    } finally {
+      await _pcmSpool?.dispose();
+      _pcmSpool = null;
+    }
+  }
+
+  Future<void> _finishRecording() async {
     if (_state != DictationState.recording) {
       debugPrint(
           '[AuraScribe] _stopAndProcess skipped — state is $_state (not recording)');
@@ -506,12 +616,11 @@ class DictationOrchestrator extends ChangeNotifier {
     String? wavPath;
 
     if (useStreaming) {
-      final pcmBytes = Uint8List.fromList(_audioBuffer);
-      _audioBuffer.clear();
+      final byteCount = _pcmSpool?.bytes ?? 0;
       await _audio.stop(); // Stops internal recorder state
       unawaited(SoundService.playStop());
 
-      if (pcmBytes.length < 1000) {
+      if (byteCount < 1000) {
         debugPrint('[AuraScribe] ❌ Stream too short, going idle');
         if (_transcription.supportsTrueStreaming) {
           await _transcription.endStream();
@@ -521,15 +630,9 @@ class DictationOrchestrator extends ChangeNotifier {
       }
 
       if (!_transcription.supportsTrueStreaming) {
-        final wavBytes = WavHeaderHelper.buildHeader(pcmBytes.length);
-        final fullWav = Uint8List(wavBytes.length + pcmBytes.length);
-        fullWav.setRange(0, wavBytes.length, wavBytes);
-        fullWav.setRange(wavBytes.length, fullWav.length, pcmBytes);
-
-        final tempDir = await getTemporaryDirectory();
-        final finalWavFile = File(p.join(tempDir.path,
-            'dictation_final_${DateTime.now().millisecondsSinceEpoch}.wav'));
-        await finalWavFile.writeAsBytes(fullWav);
+        final directory = await ProjectStorage.instance.directory('tmp/pcm');
+        final finalWavFile = await _pcmSpool!.snapshot(File(
+            '${directory.path}/final-${DateTime.now().microsecondsSinceEpoch}.wav'));
         wavPath = finalWavFile.path;
         debugPrint('[AuraScribe] WAV saved: $wavPath');
       }
@@ -561,6 +664,11 @@ class DictationOrchestrator extends ChangeNotifier {
       debugPrint('[AuraScribe] ❌ Transcription exception: $e\n$st');
       _setError('Transcription failed: $e');
       return;
+    } finally {
+      if (wavPath != null) {
+        final wav = File(wavPath);
+        if (await wav.exists()) await wav.delete();
+      }
     }
 
     debugPrint(
@@ -661,7 +769,10 @@ class DictationOrchestrator extends ChangeNotifier {
   // ── Smart Commands (Phase 5) ───────────────────────────
 
   Future<void> triggerSmartCommand() async {
-    if (_starting || _smartCommandRunning || _state != DictationState.idle) {
+    if (_starting ||
+        _externalActivity != null ||
+        _smartCommandRunning ||
+        _state != DictationState.idle) {
       return;
     }
     debugPrint('[AuraScribe] triggerSmartCommand() called');
@@ -693,13 +804,14 @@ class DictationOrchestrator extends ChangeNotifier {
     await windowManager.setResizable(false);
     await windowManager.setHasShadow(true);
     await windowManager.center();
+    setSettingsVisible(true);
     await windowManager.show();
     await windowManager.focus();
   }
 
   Future<void> closeSmartCommandHUD() async {
     debugPrint('[AuraScribe] closeSmartCommandHUD() called');
-    await windowManager.hide();
+    await hideSettingsWindow();
     await windowManager.setSize(const Size(960, 720));
     await windowManager.setMinimumSize(const Size(680, 520));
     await windowManager.setResizable(true);
@@ -788,6 +900,7 @@ class DictationOrchestrator extends ChangeNotifier {
     await windowManager.setSize(const Size(960, 720));
     await windowManager.setResizable(true);
     await windowManager.center();
+    setSettingsVisible(true);
     await windowManager.show();
     await windowManager.focus();
   }
@@ -852,6 +965,11 @@ class DictationOrchestrator extends ChangeNotifier {
 
   @override
   void dispose() {
+    windowManager.removeListener(this);
+    _disposing = true;
+    settingsTreeVisible.dispose();
+    _transcription.memory?.setActive(this, false);
+    unawaited(_pcmSpool?.dispose());
     _feedbackTimer?.cancel();
     unawaited(_audioOutput.end());
     unawaited(_hideHudOnlyWindow());

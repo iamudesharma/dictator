@@ -16,6 +16,18 @@ class _AnnotationScreenState extends State<AnnotationScreen> {
   late final service = widget.orchestrator.annotations;
   final notes = TextEditingController();
   final boundary = GlobalKey();
+  ImageProvider? _preview;
+  String? _previewPath;
+  ImageProvider _previewFor(String path) {
+    if (_previewPath != path) {
+      _preview?.evict();
+      _previewPath = path;
+      // Export already renders this 320 logical-pixel panel at pixelRatio 2.
+      _preview = ResizeImage(FileImage(File(path)), height: 640);
+    }
+    return _preview!;
+  }
+
   List<Directory> _captures = [];
   List<Offset> _points = [];
   String? _error;
@@ -38,6 +50,7 @@ class _AnnotationScreenState extends State<AnnotationScreen> {
   @override
   void dispose() {
     service.removeListener(_refresh);
+    _preview?.evict();
     notes.dispose();
     super.dispose();
   }
@@ -139,8 +152,8 @@ class _AnnotationScreenState extends State<AnnotationScreen> {
                                 child: CustomPaint(
                                     foregroundPainter:
                                         _InkPainter([...strokes, _points]),
-                                    child: Image.file(
-                                        File(
+                                    child: Image(
+                                        image: _previewFor(
                                             '${service.current!.path}/screenshot.png'),
                                         fit: BoxFit.contain))))),
                     if ((service.data['notes'] as String? ?? '').isNotEmpty)

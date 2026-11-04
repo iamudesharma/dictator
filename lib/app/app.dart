@@ -29,21 +29,25 @@ class AuraScribeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AuraScribe',
-      debugShowCheckedModeBanner: false,
-      theme: auraTheme(Brightness.light),
-      darkTheme: auraTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
-      home: AuraScribeHome(
-        orchestrator: orchestrator,
-        settings: settings,
-        hotkeyService: hotkeyService,
-        accessibility: accessibility,
-        transcriptionService: transcriptionService,
-        grammarService: grammarService,
-      ),
-    );
+    return ValueListenableBuilder<bool>(
+        valueListenable: orchestrator.settingsTreeVisible,
+        builder: (context, visible, _) => visible
+            ? MaterialApp(
+                title: 'AuraScribe',
+                debugShowCheckedModeBanner: false,
+                theme: auraTheme(Brightness.light),
+                darkTheme: auraTheme(Brightness.dark),
+                themeMode: ThemeMode.system,
+                home: AuraScribeHome(
+                  orchestrator: orchestrator,
+                  settings: settings,
+                  hotkeyService: hotkeyService,
+                  accessibility: accessibility,
+                  transcriptionService: transcriptionService,
+                  grammarService: grammarService,
+                ),
+              )
+            : const SizedBox.shrink());
   }
 }
 
@@ -74,7 +78,9 @@ class AuraScribeHome extends StatelessWidget {
         builder: (context, _) {
           return Stack(
             children: [
-              if (orchestrator.currentView == AppView.smartCommands)
+              if (!orchestrator.settingsTreeVisible.value)
+                const SizedBox.shrink()
+              else if (orchestrator.currentView == AppView.smartCommands)
                 SmartCommandHUD(orchestrator: orchestrator)
               else
                 SettingsScreen(

@@ -82,9 +82,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     WidgetsBinding.instance.addObserver(this);
     _page = widget.orchestrator.settingsPage;
     widget.orchestrator.updates.addListener(_refresh);
-    _decoderWords.text = s.decoderVocabulary;
-    _token.text = s.hfToken;
-    _vocabulary.text = s.vocabulary;
+    final drafts = widget.orchestrator.settingsDrafts;
+    _decoderWords.text = drafts['decoder'] ?? s.decoderVocabulary;
+    _token.text = drafts['token'] ?? s.hfToken;
+    _vocabulary.text = drafts['vocabulary'] ?? s.vocabulary;
+    _search.text = drafts['search'] ?? '';
     ts.addListener(_refresh);
     widget.orchestrator.addListener(_refresh);
     HistoryService.instance.addListener(_refresh);
@@ -100,41 +102,87 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) setState(() {});
   }
 
-  Future<void> _loadSystemState() async {
-    try {
-      final profiles = await PipelineStore().read();
-      final commands = await PersonalCommandStore().read();
-      final customModels = await CustomModelStore().read();
-      final keyboardSources =
-          await channel.invokeListMethod<dynamic>('keyboardSources') ?? [];
-      final benchmarks = await ModelBenchmark(ts).read();
-      final ax = await widget.accessibility.hasPermission();
-      final login = await channel.invokeMethod<bool>('launchAtLogin') ?? false;
-      final recorder = AudioRecorder();
-      List<InputDevice> devices;
-      try {
-        devices = await recorder.listInputDevices();
-      } finally {
-        await recorder.dispose();
+  Future<void>? _refreshing;
+  bool _refreshAgain = false;
+  Future<void> _loadSystemState() {
+    _refreshAgain = true;
+    return _refreshing ??=
+        _refreshLoop().whenComplete(() => _refreshing = null);
+  }
+
+  Future<void> _refreshLoop() async {
+    while (_refreshAgain && mounted) {
+      _refreshAgain = false;
+      await _loadPageState();
+    }
+  }
+
+  void _selectPage(int page) {
+    setState(() {
+      _page = page;
+      if (page != 2) _profiles = [];
+      if (page != 6) _commands = [];
+      if (page != 1) {
+        _customModels = [];
+        _keyboardSources = [];
+        _benchmarks = [];
       }
-      final bytes = await ProjectStorage.instance.modelBytes();
-      if (mounted) {
-        setState(() {
-          _profiles = profiles;
-          _commands = commands;
-          _customModels = customModels;
-          _keyboardSources = keyboardSources
-              .map((v) => Map<String, String>.from(v as Map))
-              .toList();
-          _benchmarks = benchmarks;
-          _ax = ax;
-          _login = login;
-          _microphones = devices;
-          _bytes = bytes;
-        });
+      if (page != 0 && page != 8) _microphones = [];
+    });
+    _loadSystemState();
+  }
+
+  Future<void> _loadPageState() async {
+    final page = _page;
+    try {
+      if (page == 0 || page == 8) {
+        final recorder = AudioRecorder();
+        late List<InputDevice> devices;
+        try {
+          devices = await recorder.listInputDevices();
+        } finally {
+          await recorder.dispose();
+        }
+        final ax = page == 0 ? await widget.accessibility.hasPermission() : _ax;
+        final login = page == 0
+            ? await channel.invokeMethod<bool>('launchAtLogin') ?? false
+            : _login;
+        if (mounted && _page == page) {
+          setState(() {
+            _microphones = devices;
+            _ax = ax;
+            _login = login;
+          });
+        }
+      }
+      if (page == 1) {
+        final custom = await CustomModelStore().read();
+        final sources =
+            await channel.invokeListMethod<dynamic>('keyboardSources') ?? [];
+        final benchmarks = await ModelBenchmark(ts).read();
+        if (mounted && _page == page) {
+          setState(() {
+            _customModels = custom;
+            _keyboardSources =
+                sources.map((v) => Map<String, String>.from(v as Map)).toList();
+            _benchmarks = benchmarks;
+          });
+        }
+      }
+      if (page == 1 || page == 5) {
+        final bytes = await ProjectStorage.instance.modelBytes();
+        if (mounted && _page == page) setState(() => _bytes = bytes);
+      }
+      if (page == 2) {
+        final profiles = await PipelineStore().read();
+        if (mounted && _page == page) setState(() => _profiles = profiles);
+      }
+      if (page == 6) {
+        final commands = await PersonalCommandStore().read();
+        if (mounted && _page == page) setState(() => _commands = commands);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && _page == page) {
         setState(() => _error = 'Could not refresh system settings: $e');
       }
     }
@@ -143,6 +191,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void dispose() {
     widget.orchestrator.settingsPage = _page;
+    widget.orchestrator.settingsDrafts.addAll({
+      'decoder': _decoderWords.text,
+      'token': _token.text,
+      'vocabulary': _vocabulary.text,
+      'search': _search.text,
+    });
     widget.orchestrator.updates.removeListener(_refresh);
     WidgetsBinding.instance.removeObserver(this);
     ts.removeListener(_refresh);
@@ -154,6 +208,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     _search.dispose();
     super.dispose();
   }
+
+  Future<T?> _showSettingsDialog<T>({required WidgetBuilder builder}) =>
+      widget.orchestrator.withSettingsDialog(
+          () => showDialog<T>(context: context, builder: builder));
 
   Future<void> _run(Future<void> Function() action) async {
     if (_busy) return;
@@ -196,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               width: 52,
               child: Switch.adaptive(
                   value: value,
-                  onChanged: _busy ? null : (v) => _run(() => onChanged(v)))));
+                  onChanged: locked ? null : (v) => _run(() => onChanged(v)))));
   Widget _select<T>(
           T value, Map<T, String> options, Future<void> Function(T) change,
           {bool disabled = false}) =>
@@ -223,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) => Scaffold(
       body: SettingsShell(
           selected: _page,
-          onSelected: (page) => setState(() => _page = page),
+          onSelected: _selectPage,
           onDrag: () => windowManager.startDragging(),
           status:
               ts.isLoaded ? '${ts.modelLabel} ready' : 'On-device dictation',
@@ -325,8 +383,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ? 'Ready on this Mac'
                       : 'Not loaded • choose a model to get started',
               trailing: TextButton(
-                  onPressed: () => setState(() => _page = 1),
-                  child: Text(ts.modelLabel))),
+                  onPressed: () => _selectPage(1), child: Text(ts.modelLabel))),
           PreferenceRow(
               icon: Icons.mic_none_rounded,
               title: 'Microphone',
@@ -382,10 +439,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ShortcutBinding? binding;
                               try {
                                 if (!mounted) return;
-                                binding = await showDialog<ShortcutBinding>(
-                                    context: context,
-                                    builder: (_) =>
-                                        ShortcutRecorder(action: action));
+                                binding =
+                                    await _showSettingsDialog<ShortcutBinding>(
+                                        builder: (_) =>
+                                            ShortcutRecorder(action: action));
                               } finally {
                                 await widget.hotkeyService.updateHotkey();
                               }
@@ -427,9 +484,37 @@ class _SettingsScreenState extends State<SettingsScreen>
           _switch(
               Icons.memory_outlined,
               'Preload speech model',
-              'Load the selected model on next launch. Off keeps startup memory lower.',
+              'Prepare the selected model on next launch. Low-memory mode can still add processing time.',
               s.preloadModel,
               s.setPreloadModel),
+        ]),
+        _heading('Memory'),
+        PreferenceGroup(children: [
+          _switch(
+              Icons.memory_outlined,
+              'Release models when idle',
+              'Moonshine releases model memory after each clip; other models unload after inactivity. Reloading adds processing time.',
+              s.unloadIdleModels, (value) async {
+            await s.setUnloadIdleModels(value);
+            if (ts.activeEngine == SttEngine.moonshine) await ts.unloadModel();
+            ts.memory?.configure(
+                enabled: value, delay: Duration(seconds: s.modelIdleSeconds));
+          }),
+          if (s.unloadIdleModels)
+            PreferenceRow(
+                icon: Icons.timer_outlined,
+                title: 'Release after',
+                trailing: _select(s.modelIdleSeconds, {
+                  15: '15 seconds',
+                  60: '1 minute',
+                  300: '5 minutes',
+                  if (![15, 60, 300].contains(s.modelIdleSeconds))
+                    s.modelIdleSeconds: '${s.modelIdleSeconds} seconds',
+                }, (value) async {
+                  await s.setModelIdleSeconds(value);
+                  ts.memory?.configure(
+                      enabled: true, delay: Duration(seconds: value));
+                }, disabled: locked)),
         ]),
         _heading('Other audio while dictating'),
         PreferenceGroup(children: [
@@ -629,7 +714,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ]),
         _heading('Your model benchmarks'),
         _note(
-            'Use the same short PCM WAV file to compare models on this Mac. No reference transcript means no accuracy score. Process memory excludes the separate GGUF runtime.'),
+            'Use the same short PCM WAV file to compare models on this Mac. No reference transcript means no accuracy score. Process memory excludes separate inference workers.'),
         TextButton.icon(
             onPressed: locked
                 ? null
@@ -828,8 +913,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       ];
 
   Future<void> _editPipeline([OutputProfile? profile]) async {
-    final result = await showDialog<OutputProfile>(
-        context: context, builder: (_) => PipelineEditor(profile: profile));
+    final result = await _showSettingsDialog<OutputProfile>(
+        builder: (_) => PipelineEditor(profile: profile));
     if (result == null || !mounted) return;
     await _run(() async {
       final next = [..._profiles];
@@ -1040,8 +1125,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _editCommand([PersonalCommand? command]) async {
     final name = TextEditingController(text: command?.name ?? '');
     final instruction = TextEditingController(text: command?.instruction ?? '');
-    final result = await showDialog<PersonalCommand>(
-        context: context,
+    final result = await _showSettingsDialog<PersonalCommand>(
         builder: (context) => AlertDialog(
                 title: const Text('Personal command'),
                 content: SizedBox(
