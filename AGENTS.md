@@ -33,7 +33,7 @@ flutter test
 - **Hugging Face token** may be needed for gated Gemma models. Set in app Settings → Hugging Face.
 - **macOS 13.0+** required (set in `Podfile` and `pubspec.yaml`).
 - **Podfile has a custom build phase** (`setup_litertlm_macos.sh`) that copies Gemma companion dylibs into the app bundle. This runs automatically during Xcode builds via CocoaPods `post_install`. Do not remove the script phase or the app will crash at runtime.
-- **Clipboard fallback**: AX text insertion falls back to `⌘V` paste. The clipboard is saved/restored automatically. Some apps (e.g., Electron-based) may not support AX insertion.
+- **Text insertion**: AX pins the target; normal insertion uses `⌘V` paste so web editors receive input events. Chromium 155–156 uses Unicode typing to avoid its clipboard race (newlines use Shift-Return). The clipboard is saved/restored automatically. Some apps (e.g., Electron-based) may not support AX insertion.
 - **Nemotron streaming**: Uses `sherpa-onnx` with endpoint detection. First inference has ONNX cold-start latency (~seconds). A warm-up decode of 0.5s silence runs on model load.
 
 ## Architecture

@@ -71,7 +71,7 @@ class AccessibilityService {
   }
 
   /// Insert [text] into the currently focused text field.
-  /// Returns true if AX insertion succeeded, false if clipboard fallback was used.
+  /// Returns true for AX insertion, false for native paste or Unicode input.
   Future<bool> insertText(String text) async {
     debugPrint(
       '[AuraScribe][Accessibility] insertText (${text.length} chars) → native',

@@ -22,6 +22,7 @@
 
 /* Begin PBXBuildFile section */
 		BBCE10012044A3C60003C045 /* DictationIndicatorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */; };
+		BBCE20012044A3C60003C045 /* TextInsertionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBCE20002044A3C60003C045 /* TextInsertionPolicy.swift */; };
 		03EFC3C7552EA87BEDA99DD3 /* CapturePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23556901E9F85040369852F8 /* CapturePlugin.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
 		335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */; };
@@ -69,6 +70,7 @@
 
 /* Begin PBXFileReference section */
 		BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationIndicatorPanel.swift; sourceTree = "<group>"; };
+		BBCE20002044A3C60003C045 /* TextInsertionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInsertionPolicy.swift; sourceTree = "<group>"; };
 		20BDA7F3D8B2C821912FE378 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		23556901E9F85040369852F8 /* CapturePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CapturePlugin.swift; sourceTree = "<group>"; };
 		331C80D5294CF71000263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -206,6 +208,7 @@
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				AABB00002044A3C60003C045 /* AccessibilityPlugin.swift */,
 				BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */,
+				BBCE20002044A3C60003C045 /* TextInsertionPolicy.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
@@ -487,6 +490,7 @@
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				AABB00012044A3C60003C045 /* AccessibilityPlugin.swift in Sources */,
 				BBCE10012044A3C60003C045 /* DictationIndicatorPanel.swift in Sources */,
+				BBCE20012044A3C60003C045 /* TextInsertionPolicy.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 				03EFC3C7552EA87BEDA99DD3 /* CapturePlugin.swift in Sources */,

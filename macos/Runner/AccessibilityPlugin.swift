@@ -69,7 +69,7 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
         case "beginDictationTarget":
             let app = NSWorkspace.shared.frontmostApplication
             dictationTargetPID = app?.processIdentifier ?? 0
-            dictationTargetElement = focusedElement(in: dictationTargetPID)
+            dictationTargetElement = editableFocusedElement(in: dictationTargetPID)
             result(["bundleId": app?.bundleIdentifier ?? "", "name": app?.localizedName ?? ""])
         case "endDictationTarget":
             dictationTargetPID = 0; dictationTargetElement = nil; result(nil)
@@ -305,6 +305,18 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
         return (element as! AXUIElement)
     }
 
+    private func editableFocusedElement(in pid: pid_t) -> AXUIElement? {
+        guard let element = focusedElement(in: pid) else { return nil }
+        var role: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+        // Chromium/Electron may expose only a web area or window while their
+        // accessibility tree initializes. Those containers are not text targets
+        // and cannot be restored with AXFocused. Keep the original app pinned.
+        guard let value = role as? String,
+              [kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole].contains(value) else { return nil }
+        return element
+    }
+
     /// Activation is asynchronous; wait for the original app instead of pasting
     /// into whichever window happens to own focus after the overlay appeared.
     private func performInsertion(_ text: String, pid: pid_t, element: AXUIElement?, result: @escaping FlutterResult) {
@@ -337,26 +349,31 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
                     }
                 }
             }
-            do { result(try insertTextInFocusedElement(text, element: element ?? focusedElement(in: pid))) }
+            do { try insertTextInFocusedElement(text, element: element ?? focusedElement(in: pid), result: result) }
             catch { result(FlutterError(code: "INSERTION_FAILED", message: error.localizedDescription, details: nil)) }
         }
         attempt()
     }
 
-    private func insertTextInFocusedElement(_ text: String, element: AXUIElement?) throws -> Bool {
-        if terminalPaste && isTerminalApp() { return try fallbackPaste(text, reason: "terminal_policy") }
-        if let element = element {
-            let status = AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFTypeRef)
-            if status == .success { return true }
-            if status == .invalidUIElement {
-                throw NSError(domain: "AuraScribe", code: 1, userInfo: [NSLocalizedDescriptionKey: "The original text field is no longer available."])
+    private func insertTextInFocusedElement(_ text: String, element: AXUIElement?, result: @escaping FlutterResult) throws {
+        // AXSelectedText may report success without updating a web editor's DOM
+        // or firing its input events. Use the application's normal input path.
+        let app = NSWorkspace.shared.frontmostApplication
+        if TextInsertionPolicy.hasClipboardRace(bundleURL: app?.bundleURL) {
+            let events = try TextInsertionPolicy.unicodeEvents(text)
+            for event in events { event.post(tap: .cghidEventTap) }
+            if !restoreClipboard {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { result(false) }
+        } else {
+            try fallbackPaste(text, reason: "application_input", result: result)
         }
-        return try fallbackPaste(text, reason: "ax_selected_text_unsupported")
     }
 
     /// Places text on the clipboard and simulates ⌘V.
-    private func fallbackPaste(_ text: String, reason: String) throws -> Bool {
+    private func fallbackPaste(_ text: String, reason: String, result: @escaping FlutterResult) throws {
         print("[AccessibilityPlugin] fallbackPaste (reason=\(reason))")
         let flags: CGEventFlags = terminalPaste && isTerminalApp() ? [.maskControl, .maskShift] : .maskCommand
         let source = CGEventSource(stateID: .privateState)
@@ -396,11 +413,13 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
         let shouldRestore = restoreClipboard
         keyDown.flags = flags
         keyUp.flags = flags
-        keyDown.post(tap: .cgAnnotatedSessionEventTap)
-        keyUp.post(tap: .cgAnnotatedSessionEventTap)
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
 
-        // Wait 250ms and restore previous clipboard items so user's clipboard is unchanged
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        // Keep the clipboard stable until the app has consumed the paste. The
+        // method completes after settling, so live deltas cannot overwrite it.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            defer { result(false) }
             guard shouldRestore else { return }
             let pb = NSPasteboard.general
             guard pb.changeCount == insertedChangeCount else { return }
@@ -408,7 +427,6 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
             if let prev = previousItems { pb.writeObjects(prev) }
         }
 
-        return false
     }
     private func isTerminalApp() -> Bool {
         let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""

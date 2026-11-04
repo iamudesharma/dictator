@@ -9,7 +9,9 @@ MIT License
 Copyright (c) 2026 Christopher Langton
 
 Virtual microphone driver: Copyright (c) 2026 Kit Langton.
-Adapted from Hex 6813f740; application names and CoreAudio UIDs changed.
+Virtual driver adapted from Hex 6813f740; application names and CoreAudio UIDs changed.
+Chromium 155–156 input workaround and Unicode chunking in
+`TextInsertionPolicy.swift` adapted from Hex paste.rs and keyboard.rs.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
