@@ -66,7 +66,38 @@ post_install do |installer|
       phase.input_paths = [
         '$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Frameworks/LiteRtLm.framework/Versions/A/LiteRtLm',
       ]
-      phase.shell_script = "\"${SRCROOT}/scripts/setup_litertlm_macos.sh\"\n"
+      phase.shell_script = "\"${SRCROOT}/scripts/setup_litertlm_macos.sh\"\n\"${SRCROOT}/scripts/setup_aurascribe_runtime.sh\"\n"
     end
+  end
+end
+
+# Keep dependency-cache binaries immutable. Some published sherpa dylibs carry
+# signatures invalidated by their universal-binary assembly; macOS can SIGKILL
+# rsync when it mmaps the original inode. Stage byte copies inside this project
+# and sign those copies before CocoaPods embeds them in the app.
+post_integrate do |installer|
+  require 'fileutils'
+  project_dir = File.expand_path(__dir__)
+  source_relative = '../Flutter/ephemeral/.symlinks/plugins/sherpa_onnx_macos/macos'
+  staged_relative = '../Flutter/ephemeral/aurascribe_native/sherpa_onnx'
+  source_dir = File.expand_path(source_relative, installer.sandbox.root.to_s)
+  staged_dir = File.expand_path(staged_relative, installer.sandbox.root.to_s)
+  FileUtils.mkdir_p(staged_dir)
+  Dir.glob(File.join(source_dir, '*.dylib')).each do |source|
+    target = File.join(staged_dir, File.basename(source))
+    temporary = "#{target}.tmp"
+    IO.copy_stream(source, temporary)
+    File.rename(temporary, target)
+    unless system('/usr/bin/codesign', '--force', '--sign', '-', target) &&
+           system('/usr/bin/codesign', '--verify', '--strict', target)
+      raise "Could not prepare project-local native dependency: #{target}"
+    end
+  end
+  support_dir = File.join(installer.sandbox.root.to_s, 'Target Support Files', 'Pods-Runner')
+  Dir.glob(File.join(support_dir, 'Pods-Runner-frameworks*')).each do |file|
+    next unless File.file?(file)
+    source = File.read(file)
+    updated = source.gsub(source_relative, staged_relative)
+    File.write(file, updated) if updated != source
   end
 end

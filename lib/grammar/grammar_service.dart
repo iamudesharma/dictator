@@ -17,7 +17,8 @@ class GrammarService {
 
   GrammarModelService? _cachedGrammarModel;
 
-  GrammarService(this._settings, GrammarModelService Function() grammarModelFactory)
+  GrammarService(
+      this._settings, GrammarModelService Function() grammarModelFactory)
       : _grammarModelFactory = grammarModelFactory;
 
   /// Convenience constructor that creates its own [GrammarModelService] on
@@ -27,6 +28,31 @@ class GrammarService {
 
   void attachSttModel(InferenceModel? model) {
     _sttSharedModel = model;
+  }
+
+  Future<void> unloadModel() async {
+    _sttSharedModel = null;
+    await _grammarModelFactory().unload();
+  }
+
+  Future<String> transform(String text, String instruction) async {
+    final service = _cachedGrammarModel ??= _grammarModelFactory();
+    final model =
+        await service.resolveTextModel(sttSharedModel: _sttSharedModel);
+    if (model == null) throw StateError('The local text model is unavailable.');
+    final session = await model.createSession();
+    try {
+      await session.addQueryChunk(Message.text(
+          text:
+              '$instruction\nReturn ONLY the transformed text. No labels or explanations.\n\n$text'));
+      final result = await session.getResponse();
+      if (result.trim().isEmpty) {
+        throw StateError('The text model returned no response.');
+      }
+      return LlmOutputSanitizer.clean(result, originalText: text);
+    } finally {
+      await session.close();
+    }
   }
 
   Future<String> clean(String rawText) async {
@@ -46,7 +72,8 @@ class GrammarService {
     InferenceModel? model;
     try {
       final grammarModel = _cachedGrammarModel ??= _grammarModelFactory();
-      model = await grammarModel.resolveTextModel(sttSharedModel: _sttSharedModel);
+      model =
+          await grammarModel.resolveTextModel(sttSharedModel: _sttSharedModel);
     } catch (e) {
       debugPrint('[AuraScribe][Grammar] model unavailable: $e');
       return rawText;

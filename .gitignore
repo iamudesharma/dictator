@@ -48,3 +48,8 @@ app.*.map.json
 assets/*.litertlm
 assets/gemma-4-E2B-it.litertlm
 
+
+# Project-local runtime data and upstream design reference
+/.aurascribe/
+/.reference/
+/.widget_preview/

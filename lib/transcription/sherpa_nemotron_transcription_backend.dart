@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
+import '../storage/project_storage.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'stt_backend.dart';
 
@@ -39,15 +37,16 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
     _loading = true;
     _statusMessage = 'Initializing bindings…';
     onProgress?.call();
-    
+
     try {
       debugPrint('[AuraScribe][Nemotron] Initializing sherpa-onnx bindings…');
       sherpa_onnx.initBindings();
 
-      final supportDir = await getApplicationSupportDirectory();
-      final modelDir = Directory('${supportDir.path}/models/nemotron_3.5_0.6b_int8');
-      
-      const repoId = 'csukuangfj/sherpa-onnx-nemotron-speech-streaming-en-0.6b-int8-2026-01-14';
+      final modelDir = await ProjectStorage.instance
+          .directory('models/nemotron_3.5_0.6b_int8');
+
+      const repoId =
+          'csukuangfj/sherpa-onnx-nemotron-speech-streaming-en-0.6b-int8-2026-01-14';
       final infoFile = File('${modelDir.path}/model_info.json');
       var needsClean = true;
       if (await infoFile.exists()) {
@@ -61,25 +60,39 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
       }
 
       if (needsClean) {
-        debugPrint('[AuraScribe][Nemotron] Model repo change or stale files. Cleaning $modelDir…');
+        debugPrint(
+            '[AuraScribe][Nemotron] Model repo change or stale files. Cleaning $modelDir…');
         if (await modelDir.exists()) {
           await modelDir.delete(recursive: true);
         }
         await modelDir.create(recursive: true);
       }
 
-      const repoBaseUrl = 'https://huggingface.co/csukuangfj/sherpa-onnx-nemotron-speech-streaming-en-0.6b-int8-2026-01-14/resolve/main';
-      
+      const repoBaseUrl =
+          'https://huggingface.co/csukuangfj/sherpa-onnx-nemotron-speech-streaming-en-0.6b-int8-2026-01-14/resolve/main';
+
       final encoderPath = '${modelDir.path}/encoder.int8.onnx';
       final decoderPath = '${modelDir.path}/decoder.int8.onnx';
       final joinerPath = '${modelDir.path}/joiner.int8.onnx';
       final tokensPath = '${modelDir.path}/tokens.txt';
 
       // Download all required files
-      await _downloadFileIfNeeded(url: '$repoBaseUrl/encoder.int8.onnx', savePath: encoderPath, fileName: 'encoder.int8.onnx');
-      await _downloadFileIfNeeded(url: '$repoBaseUrl/decoder.int8.onnx', savePath: decoderPath, fileName: 'decoder.int8.onnx');
-      await _downloadFileIfNeeded(url: '$repoBaseUrl/joiner.int8.onnx', savePath: joinerPath, fileName: 'joiner.int8.onnx');
-      await _downloadFileIfNeeded(url: '$repoBaseUrl/tokens.txt', savePath: tokensPath, fileName: 'tokens.txt');
+      await _downloadFileIfNeeded(
+          url: '$repoBaseUrl/encoder.int8.onnx',
+          savePath: encoderPath,
+          fileName: 'encoder.int8.onnx');
+      await _downloadFileIfNeeded(
+          url: '$repoBaseUrl/decoder.int8.onnx',
+          savePath: decoderPath,
+          fileName: 'decoder.int8.onnx');
+      await _downloadFileIfNeeded(
+          url: '$repoBaseUrl/joiner.int8.onnx',
+          savePath: joinerPath,
+          fileName: 'joiner.int8.onnx');
+      await _downloadFileIfNeeded(
+          url: '$repoBaseUrl/tokens.txt',
+          savePath: tokensPath,
+          fileName: 'tokens.txt');
 
       // Write info file to mark successful setup
       await infoFile.writeAsString(json.encode({'repoId': repoId}));
@@ -143,7 +156,8 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
         return '';
       }
 
-      debugPrint('[AuraScribe][Nemotron] Running inference (sampleRate: ${waveData.sampleRate}, samples: ${waveData.samples.length})…');
+      debugPrint(
+          '[AuraScribe][Nemotron] Running inference (sampleRate: ${waveData.sampleRate}, samples: ${waveData.samples.length})…');
       final stream = _recognizer!.createStream();
       stream.acceptWaveform(
         samples: waveData.samples,
@@ -202,7 +216,8 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
 
   void startStream() {
     if (_recognizer == null) {
-      debugPrint('[AuraScribe][Nemotron] Cannot start stream: recognizer is null');
+      debugPrint(
+          '[AuraScribe][Nemotron] Cannot start stream: recognizer is null');
       return;
     }
     _activeStream?.free();
@@ -240,12 +255,15 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
 
       if (_recognizer!.isEndpoint(stream)) {
         if (activeText.isNotEmpty) {
-          _finalizedText = _finalizedText.isEmpty ? activeText : '$_finalizedText $activeText';
+          _finalizedText = _finalizedText.isEmpty
+              ? activeText
+              : '$_finalizedText $activeText';
         }
         _recognizer!.reset(stream);
         _currentText = _finalizedText;
       } else {
-        _currentText = _finalizedText.isEmpty ? activeText : '$_finalizedText $activeText';
+        _currentText =
+            _finalizedText.isEmpty ? activeText : '$_finalizedText $activeText';
       }
     } catch (e) {
       debugPrint('[AuraScribe][Nemotron] Error during stream decode chunk: $e');
@@ -272,10 +290,13 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
         _recognizer!.decode(stream);
       }
       final lastResult = _recognizer!.getResult(stream).text.trim();
-      final finalResult = _finalizedText.isEmpty 
-          ? lastResult 
-          : (lastResult.isEmpty ? _finalizedText : '$_finalizedText $lastResult');
-      debugPrint('[AuraScribe][Nemotron] True stream session ended. Final text: "$finalResult"');
+      final finalResult = _finalizedText.isEmpty
+          ? lastResult
+          : (lastResult.isEmpty
+              ? _finalizedText
+              : '$_finalizedText $lastResult');
+      debugPrint(
+          '[AuraScribe][Nemotron] True stream session ended. Final text: "$finalResult"');
       return finalResult.trim();
     } catch (e) {
       debugPrint('[AuraScribe][Nemotron] Error ending stream: $e');
@@ -290,77 +311,23 @@ class SherpaNemotronTranscriptionBackend implements SttBackend {
 
   /// Downloads file streaming it directly to disk to minimize memory consumption.
   /// Also verifies file length using HEAD request if file already exists.
-  Future<void> _downloadFileIfNeeded({
-    required String url,
-    required String savePath,
-    required String fileName,
-  }) async {
-    final file = File(savePath);
-    if (await file.exists()) {
-      final localLength = await file.length();
-      if (localLength > 0) {
-        // Send a HEAD request to check remote file size
-        try {
-          final headResponse = await http.head(Uri.parse(url));
-          final remoteLengthHeader = headResponse.headers['content-length'];
-          if (remoteLengthHeader != null) {
-            final remoteLength = int.parse(remoteLengthHeader);
-            if (localLength == remoteLength) {
-              debugPrint('[AuraScribe][Nemotron] $fileName already exists and matches remote size ($localLength bytes).');
-              return;
-            } else {
-              debugPrint('[AuraScribe][Nemotron] File size mismatch for $fileName (local: $localLength, remote: $remoteLength). Deleting and re-downloading…');
-              await file.delete();
-            }
-          } else {
-            // Cannot verify length, assume it is fine
-            debugPrint('[AuraScribe][Nemotron] $fileName already exists (cannot verify size, skipping download).');
-            return;
-          }
-        } catch (e) {
-          debugPrint('[AuraScribe][Nemotron] HEAD check failed for $fileName: $e. Assuming existing file is fine.');
-          return;
-        }
-      }
-    }
-
-    debugPrint('[AuraScribe][Nemotron] Downloading $url…');
-    _statusMessage = 'Downloading $fileName…';
-    onProgress?.call();
-
-    final request = http.Request('GET', Uri.parse(url));
-    final response = await http.Client().send(request);
-
-    if (response.statusCode == 200) {
-      final totalBytes = response.contentLength ?? 0;
-      var downloadedBytes = 0;
-      final sink = file.openWrite();
-      
-      await response.stream.forEach((chunk) {
-        sink.add(chunk);
-        downloadedBytes += chunk.length;
-        if (totalBytes > 0) {
-          final progressPercent = (downloadedBytes / totalBytes * 100).toStringAsFixed(1);
-          final mbDownloaded = (downloadedBytes / (1024 * 1024)).toStringAsFixed(1);
-          final mbTotal = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-          _statusMessage = 'Downloading $fileName: $progressPercent% ($mbDownloaded/$mbTotal MB)';
+  Future<void> _downloadFileIfNeeded(
+      {required String url,
+      required String savePath,
+      required String fileName}) async {
+    await ProjectStorage.instance.download(
+        folder: 'nemotron_3.5_0.6b_int8',
+        name: fileName,
+        url: Uri.parse(url),
+        onProgress: (message) {
+          _statusMessage = message;
           onProgress?.call();
-        } else {
-          final mbDownloaded = (downloadedBytes / (1024 * 1024)).toStringAsFixed(1);
-          _statusMessage = 'Downloading $fileName: $mbDownloaded MB';
-          onProgress?.call();
-        }
-      });
-      await sink.close();
-      debugPrint('[AuraScribe][Nemotron] Saved file to $savePath');
-    } else {
-      throw Exception('Failed to download $url (Status: ${response.statusCode})');
-    }
+        });
   }
 
-  Future<void> _deleteQuietly(File f) async {
+  Future<void> _deleteQuietly(File file) async {
     try {
-      if (await f.exists()) await f.delete();
+      if (await file.exists()) await file.delete();
     } catch (_) {}
   }
 }

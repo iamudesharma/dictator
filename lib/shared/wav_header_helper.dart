@@ -16,8 +16,8 @@ class WavHeaderHelper {
     header.setUint32(4, 36 + pcmLengthBytes, Endian.little);
 
     // 8-11: "WAVE" format
-    header.setUint8(8, 0x57);  // W
-    header.setUint8(9, 0x41);  // A
+    header.setUint8(8, 0x57); // W
+    header.setUint8(9, 0x41); // A
     header.setUint8(10, 0x56); // V
     header.setUint8(11, 0x45); // E
 

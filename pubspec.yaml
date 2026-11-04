@@ -35,6 +35,9 @@ dependencies:
   whisper_ggml: ^1.7.0
   sherpa_onnx: ^1.13.2
   http: ^1.2.1
+  path_provider_platform_interface: ^2.1.3
+  crypto: ^3.0.8
+  ffi: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -44,6 +47,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/sounds/
     - assets/tray_icon.png
     - assets/tray_icon_recording.png
     - assets/tray_icon_transcribing.png

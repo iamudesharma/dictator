@@ -45,4 +45,4 @@ Speech-to-text backends with a unified facade.
 - Backends are constructed lazily — only the active engine allocates RAM
 - Concurrent `ensureLoaded()` calls share a single in-flight load
 - Models auto-download from Hugging Face on first use
-- Cached in `~/Library/Application Support/` with version tracking
+- Cached in `<project>/.aurascribe/models/` with version tracking

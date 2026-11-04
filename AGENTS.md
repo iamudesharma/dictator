@@ -2,7 +2,7 @@
 
 ## What This Is
 
-macOS-only Flutter menu bar app for offline voice dictation. Runs in the system tray with no Dock icon (`LSUIElement`). Three STT backends: Gemma 4 E2B (GPU), Whisper (CPU), Nemotron-3.5 (streaming). Optional grammar cleanup via Gemma 3 270M LLM.
+macOS-only Flutter menu bar app for offline voice dictation. Runs in the system tray with no Dock icon (`LSUIElement`). Five STT backend families: Gemma 4 E2B (GPU), Whisper (CPU), Nemotron-3.5 (streaming), Moonshine Tiny INT8 (CPU), and a pinned native GGUF speech catalog. Optional grammar cleanup via Gemma 3 270M LLM.
 
 ## Build & Run
 
@@ -28,7 +28,7 @@ flutter test
 
 ## Critical Gotchas
 
-- **Models download on first use** from Hugging Face to `~/Library/Application Support/`. No model files in repo (`.gitignore` excludes `*.litertlm`).
+- **Models download on first use** from Hugging Face to `<project>/.aurascribe/models/`. Inference caches also stay under `<project>/.aurascribe/`; never fall back to a global directory. No model files in repo (`.gitignore` excludes `*.litertlm`).
 - **Gemma STT requires 16 GB RAM** recommended. Whisper works on 8 GB.
 - **Hugging Face token** may be needed for gated Gemma models. Set in app Settings → Hugging Face.
 - **macOS 13.0+** required (set in `Podfile` and `pubspec.yaml`).
@@ -68,7 +68,7 @@ lib/
 
 ## Testing
 
-The test suite is minimal (smoke test only). The app requires live mic input, AX permissions, and model downloads—full integration testing is manual.
+Tests cover settings navigation, the dictation indicator, storage boundaries/download recovery, vocabulary and token migration. The app requires live mic input, AX permissions, and model downloads—full integration testing is manual.
 
 ## Distribution
 
@@ -88,3 +88,12 @@ bash create_dmg.sh
 1. Open DMG → Drag `AuraScribe.app` to Applications
 2. Right-click app → Open (bypasses Gatekeeper on first launch)
 3. Grant Accessibility permission when prompted (Settings → Privacy & Security → Accessibility)
+
+## Extended options and native tools
+
+- `lib/output`, `meetings`, `capture`, `updates`, `diagnostics`, `benchmarks` implement the extended settings pages. Shared controllers belong to the orchestrator so operations survive navigation.
+- `CapturePlugin.swift`, `VoiceFilterPlugin.swift`, `UpdatePlugin.swift` register capture/OCR, audio filtering and verified updates. Their channels use `com.aurascribe/capture`, `com.aurascribe/voice_filter`, `com.aurascribe/updates`.
+- The existing Gemma setup phase also calls `macos/scripts/setup_aurascribe_runtime.sh`; preserve both. Native helper and optional HAL installer output stays in `.aurascribe/tools/`.
+- Build optional components with `bash tool/build_transcribe_runtime.sh` and `bash tool/build_virtual_microphone.sh`. Building never installs the driver.
+- Model fixture checks are opt-in `dart run tool/verify_*.dart`; they download project-local weights. Standard tests mock native permission/device operations.
+- See `docs/implementation-checklist.md` for implementation status and manual hardware/signing gates. Do not describe compiled native paths as live-tested.

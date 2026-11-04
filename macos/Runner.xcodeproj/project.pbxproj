@@ -21,6 +21,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		BBCE10012044A3C60003C045 /* DictationIndicatorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */; };
+		03EFC3C7552EA87BEDA99DD3 /* CapturePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23556901E9F85040369852F8 /* CapturePlugin.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
 		335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */; };
 		33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC10F02044A3C60003C045 /* AppDelegate.swift */; };
@@ -30,6 +32,8 @@
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		8557C4A7070C428BFB8AADFF /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 38649EA59AFEE4B1CBF6E235 /* Pods_RunnerTests.framework */; };
 		8F1A0EA6FF02C2CCE597CE15 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67D5EC4BDFE50B6A1E5C7AD8 /* Pods_Runner.framework */; };
+		950CB611F4AACFBA5C164E27 /* VoiceFilterPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9483C19F976491303B310633 /* VoiceFilterPlugin.swift */; };
+		96F8899CFC4BFEA6CD7AEAD6 /* UpdatePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C58A950045718169EE60FF3 /* UpdatePlugin.swift */; };
 		AABB00012044A3C60003C045 /* AccessibilityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB00002044A3C60003C045 /* AccessibilityPlugin.swift */; };
 /* End PBXBuildFile section */
 
@@ -64,7 +68,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationIndicatorPanel.swift; sourceTree = "<group>"; };
 		20BDA7F3D8B2C821912FE378 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		23556901E9F85040369852F8 /* CapturePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CapturePlugin.swift; sourceTree = "<group>"; };
 		331C80D5294CF71000263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		331C80D7294CF71000263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		333000ED22D3DE5D00554162 /* Warnings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Warnings.xcconfig; sourceTree = "<group>"; };
@@ -87,6 +93,8 @@
 		72B04F4C2599909D946A11DC /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		7C58A950045718169EE60FF3 /* UpdatePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UpdatePlugin.swift; sourceTree = "<group>"; };
+		9483C19F976491303B310633 /* VoiceFilterPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VoiceFilterPlugin.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		AABB00002044A3C60003C045 /* AccessibilityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPlugin.swift; sourceTree = "<group>"; };
 		B57CD7959634801E63FF6A8A /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
@@ -197,11 +205,15 @@
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				AABB00002044A3C60003C045 /* AccessibilityPlugin.swift */,
+				BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
 				33BA886A226E78AF003329D5 /* Configs */,
+				23556901E9F85040369852F8 /* CapturePlugin.swift */,
+				9483C19F976491303B310633 /* VoiceFilterPlugin.swift */,
+				7C58A950045718169EE60FF3 /* UpdatePlugin.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -416,7 +428,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/scripts/setup_litertlm_macos.sh\"\n";
+			shellScript = "\"${SRCROOT}/scripts/setup_litertlm_macos.sh\"\n\"${SRCROOT}/scripts/setup_aurascribe_runtime.sh\"\n";
 		};
 		B9E15206733BD9755091AFC8 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -474,8 +486,12 @@
 			files = (
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				AABB00012044A3C60003C045 /* AccessibilityPlugin.swift in Sources */,
+				BBCE10012044A3C60003C045 /* DictationIndicatorPanel.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
+				03EFC3C7552EA87BEDA99DD3 /* CapturePlugin.swift in Sources */,
+				950CB611F4AACFBA5C164E27 /* VoiceFilterPlugin.swift in Sources */,
+				96F8899CFC4BFEA6CD7AEAD6 /* UpdatePlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

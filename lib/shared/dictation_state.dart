@@ -8,7 +8,8 @@ enum DictationState {
 }
 
 extension DictationStateX on DictationState {
-  bool get isActive => this != DictationState.idle && this != DictationState.error;
+  bool get isActive =>
+      this != DictationState.idle && this != DictationState.error;
 
   String get label {
     switch (this) {

@@ -5,6 +5,8 @@ import '../settings/settings_service.dart';
 import '../shared/stt_engine.dart';
 import 'gemma_transcription_backend.dart';
 import 'stt_backend.dart';
+import 'gguf_transcription_backend.dart';
+import 'moonshine_transcription_backend.dart';
 import 'whisper_transcription_backend.dart';
 import 'sherpa_nemotron_transcription_backend.dart';
 
@@ -16,6 +18,8 @@ import 'sherpa_nemotron_transcription_backend.dart';
 class TranscriptionService extends ChangeNotifier {
   final SettingsService _settings;
 
+  GgufTranscriptionBackend? _gguf;
+  MoonshineTranscriptionBackend? _moonshine;
   WhisperTranscriptionBackend? _whisper;
   GemmaTranscriptionBackend? _gemma;
   SherpaNemotronTranscriptionBackend? _nemotron;
@@ -121,11 +125,18 @@ class TranscriptionService extends ChangeNotifier {
   /// Call after user changes STT engine in settings.
   Future<void> switchEngine(SttEngine engine) async {
     if (engine == _activeEngine && isLoaded) return;
+    await _loadInFlight;
     await _disposeActive();
     _activeEngine = engine;
     await _settings.setSttEngineIndex(engine.index);
-    final error = await _loadActive();
+    final error = await ensureLoaded();
     if (error != null) debugPrint('[AuraScribe] switchEngine: $error');
+    notifyListeners();
+  }
+
+  Future<void> unloadModel() async {
+    await _loadInFlight;
+    await _disposeActive();
     notifyListeners();
   }
 
@@ -188,6 +199,12 @@ class TranscriptionService extends ChangeNotifier {
       case SttEngine.nemotron:
         _nemotron = null;
         break;
+      case SttEngine.gguf:
+        _gguf = null;
+        break;
+      case SttEngine.moonshine:
+        _moonshine = null;
+        break;
     }
   }
 
@@ -195,17 +212,28 @@ class TranscriptionService extends ChangeNotifier {
 
   SttBackend? _ensureBackend(SttEngine engine) {
     switch (engine) {
+      case SttEngine.gguf:
+        final b = _gguf ??= GgufTranscriptionBackend(_settings);
+        b.onProgress = notifyListeners;
+        return b;
+      case SttEngine.moonshine:
+        final b = _moonshine ??= MoonshineTranscriptionBackend();
+        b.onProgress = notifyListeners;
+        return b;
       case SttEngine.gemma:
         const promptText =
-            'Transcribe the following speech segment segment in English into English text. '
+            'Transcribe the following speech segment in English into English text. '
             'The speaker has an Indian English accent. Transcribe the spoken English accurately, '
             'accounting for retroflex sounds, syllable-timed rhythm, and typical Indian English pronunciation patterns. '
             'Use digits for numbers. Output only the transcription, nothing else.';
-        final b = _gemma ??= GemmaTranscriptionBackend(prompt: promptText);
+        final b =
+            _gemma ??= GemmaTranscriptionBackend(_settings, prompt: promptText);
         b.onProgress = notifyListeners;
         return b;
       case SttEngine.whisper:
-        return _whisper ??= WhisperTranscriptionBackend(_settings);
+        final b = _whisper ??= WhisperTranscriptionBackend(_settings);
+        b.onProgress = notifyListeners;
+        return b;
       case SttEngine.nemotron:
         final b = _nemotron ??= SherpaNemotronTranscriptionBackend();
         b.onProgress = notifyListeners;
@@ -217,8 +245,12 @@ class TranscriptionService extends ChangeNotifier {
     switch (engine) {
       case SttEngine.gemma:
         return 'Gemma 4 E2B (GPU)';
+      case SttEngine.gguf:
+        return 'GGUF speech catalog';
       case SttEngine.whisper:
         return 'Whisper';
+      case SttEngine.moonshine:
+        return 'Moonshine Tiny INT8';
       case SttEngine.nemotron:
         return 'Nemotron-3.5 0.6B (ONNX INT8)';
     }
@@ -226,6 +258,8 @@ class TranscriptionService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _gguf?.dispose();
+    _moonshine?.dispose();
     _whisper?.dispose();
     _gemma?.dispose();
     _nemotron?.dispose();
