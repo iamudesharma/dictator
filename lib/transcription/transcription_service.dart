@@ -1,3 +1,5 @@
+import 'gguf_catalog.dart';
+import '../memory/model_memory_policy.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 
@@ -5,6 +7,8 @@ import '../settings/settings_service.dart';
 import '../shared/stt_engine.dart';
 import 'gemma_transcription_backend.dart';
 import 'stt_backend.dart';
+import 'gguf_transcription_backend.dart';
+import 'moonshine_transcription_backend.dart';
 import 'whisper_transcription_backend.dart';
 import 'sherpa_nemotron_transcription_backend.dart';
 
@@ -16,12 +20,29 @@ import 'sherpa_nemotron_transcription_backend.dart';
 class TranscriptionService extends ChangeNotifier {
   final SettingsService _settings;
 
+  GgufTranscriptionBackend? _gguf;
+  MoonshineTranscriptionBackend? _moonshine;
   WhisperTranscriptionBackend? _whisper;
   GemmaTranscriptionBackend? _gemma;
   SherpaNemotronTranscriptionBackend? _nemotron;
   SttEngine _activeEngine;
 
-  TranscriptionService(this._settings)
+  final ModelMemoryPolicy? memory;
+  final SttBackend Function(SttEngine)? backendFactory;
+  final Map<SttEngine, SttBackend> _injectedBackends = {};
+  Future<void> _operationTail = Future.value();
+
+  Future<T> _serialize<T>(Future<T> Function() operation) {
+    final next = _operationTail.then((_) => operation());
+    _operationTail =
+        next.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return next;
+  }
+
+  Future<T> _use<T>(Future<T> Function() operation) =>
+      memory == null ? operation() : memory!.run(operation);
+
+  TranscriptionService(this._settings, {this.memory, this.backendFactory})
       : _activeEngine = SttEngineX.fromIndex(_settings.sttEngineIndex);
 
   Future<String?>? _loadInFlight;
@@ -99,11 +120,13 @@ class TranscriptionService extends ChangeNotifier {
 
   /// Blocks until the active STT engine is ready. Safe to call while a load is
   /// already in progress (e.g. background preload + user hotkey).
-  Future<String?> ensureLoaded() async {
-    if (isLoaded) return null;
-    _loadInFlight ??= _loadSelectedEngine();
-    return _loadInFlight!;
-  }
+  Future<String?> ensureLoaded() => _use(() async {
+        // Even an apparently loaded engine may currently be inside idle cleanup.
+        // Acquire the activity fence before inspecting its native lifetime.
+        if (isLoaded) return null;
+        _loadInFlight ??= _serialize(_loadSelectedEngine);
+        return _loadInFlight!;
+      });
 
   Future<String?> _loadSelectedEngine() async {
     try {
@@ -119,40 +142,42 @@ class TranscriptionService extends ChangeNotifier {
   }
 
   /// Call after user changes STT engine in settings.
-  Future<void> switchEngine(SttEngine engine) async {
-    if (engine == _activeEngine && isLoaded) return;
-    await _disposeActive();
-    _activeEngine = engine;
-    await _settings.setSttEngineIndex(engine.index);
-    final error = await _loadActive();
-    if (error != null) debugPrint('[AuraScribe] switchEngine: $error');
-    notifyListeners();
-  }
+  Future<void> switchEngine(SttEngine engine) =>
+      _use(() => _serialize(() async {
+            if (engine == _activeEngine && isLoaded) return;
+            await _disposeActive();
+            _activeEngine = engine;
+            await _settings.setSttEngineIndex(engine.index);
+            final error = await _loadActive();
+            if (error != null) throw StateError(error);
+            notifyListeners();
+          }));
 
-  Future<void> reloadModelIfNeeded() async {
-    final w = _whisper;
-    if (_activeEngine == SttEngine.whisper && w != null) {
-      await w.reloadIfModelChanged();
-      notifyListeners();
-    }
-  }
+  Future<void> unloadModel() => _use(releaseIdleResources);
 
-  Future<String> transcribe(String audioPath) async {
-    final backend = _activeBackend();
-    if (backend == null) {
-      return '[Model not loaded — please wait for initialization]';
-    }
-    if (!backend.isLoaded) {
-      final error = await backend.load();
-      if (error != null) {
-        debugPrint('[AuraScribe] lazy load failed: $error');
-        return '[Model not loaded — please wait for initialization]';
-      }
-      notifyListeners();
-    }
-    final rawTranscript = await backend.transcribe(audioPath);
-    return _cleanTranscriptionNoise(rawTranscript);
-  }
+  /// Called only behind the shared idle fence, or an explicit activity lease.
+  Future<void> releaseIdleResources() => _serialize(() async {
+        await _disposeActive();
+        notifyListeners();
+      });
+
+  Future<void> reloadModelIfNeeded() => _use(() => _serialize(() async {
+        final w = _whisper;
+        if (_activeEngine == SttEngine.whisper && w != null) {
+          await w.reloadIfModelChanged();
+          notifyListeners();
+        }
+      }));
+
+  Future<String> transcribe(String audioPath) =>
+      _use(() => _serialize(() async {
+            if (!isLoaded) {
+              final error = await _loadActive();
+              if (error != null) throw StateError(error);
+            }
+            final rawTranscript = await _activeBackend()!.transcribe(audioPath);
+            return _cleanTranscriptionNoise(rawTranscript);
+          }));
 
   String _cleanTranscriptionNoise(String text) {
     // Matches any [noise] or (noise) annotations generated by Whisper for non-speech events
@@ -178,6 +203,7 @@ class TranscriptionService extends ChangeNotifier {
   Future<void> _disposeActive() async {
     final backend = _activeBackend();
     if (backend != null) await backend.dispose();
+    _injectedBackends.remove(_activeEngine);
     switch (_activeEngine) {
       case SttEngine.gemma:
         _gemma = null;
@@ -188,24 +214,54 @@ class TranscriptionService extends ChangeNotifier {
       case SttEngine.nemotron:
         _nemotron = null;
         break;
+      case SttEngine.gguf:
+        _gguf = null;
+        break;
+      case SttEngine.moonshine:
+        _moonshine = null;
+        break;
     }
   }
 
-  SttBackend? _activeBackend() => _ensureBackend(_activeEngine);
+  SttBackend? _activeBackend() =>
+      _injectedBackends[_activeEngine] ??
+      switch (_activeEngine) {
+        SttEngine.gguf => _gguf,
+        SttEngine.moonshine => _moonshine,
+        SttEngine.whisper => _whisper,
+        SttEngine.gemma => _gemma,
+        SttEngine.nemotron => _nemotron,
+      };
 
   SttBackend? _ensureBackend(SttEngine engine) {
+    if (backendFactory != null) {
+      return _injectedBackends.putIfAbsent(
+          engine, () => backendFactory!(engine));
+    }
     switch (engine) {
+      case SttEngine.gguf:
+        final b = _gguf ??= GgufTranscriptionBackend(_settings);
+        b.onProgress = notifyListeners;
+        return b;
+      case SttEngine.moonshine:
+        final b = _moonshine ??= MoonshineTranscriptionBackend(
+            releaseAfterClip: _settings.unloadIdleModels);
+        b.onProgress = notifyListeners;
+        return b;
       case SttEngine.gemma:
         const promptText =
-            'Transcribe the following speech segment segment in English into English text. '
+            'Transcribe the following speech segment in English into English text. '
             'The speaker has an Indian English accent. Transcribe the spoken English accurately, '
             'accounting for retroflex sounds, syllable-timed rhythm, and typical Indian English pronunciation patterns. '
             'Use digits for numbers. Output only the transcription, nothing else.';
-        final b = _gemma ??= GemmaTranscriptionBackend(prompt: promptText);
+        final b =
+            _gemma ??= GemmaTranscriptionBackend(_settings, prompt: promptText);
         b.onProgress = notifyListeners;
         return b;
       case SttEngine.whisper:
-        return _whisper ??= WhisperTranscriptionBackend(_settings);
+        final b = _whisper ??= WhisperTranscriptionBackend(_settings);
+        b.onProgress = notifyListeners;
+        return b;
       case SttEngine.nemotron:
         final b = _nemotron ??= SherpaNemotronTranscriptionBackend();
         b.onProgress = notifyListeners;
@@ -217,8 +273,16 @@ class TranscriptionService extends ChangeNotifier {
     switch (engine) {
       case SttEngine.gemma:
         return 'Gemma 4 E2B (GPU)';
+      case SttEngine.gguf:
+        return ggufCatalog
+                .where((model) => model.id == _settings.ggufModel)
+                .firstOrNull
+                ?.name ??
+            'Imported speech model';
       case SttEngine.whisper:
         return 'Whisper';
+      case SttEngine.moonshine:
+        return 'Moonshine Tiny INT8';
       case SttEngine.nemotron:
         return 'Nemotron-3.5 0.6B (ONNX INT8)';
     }
@@ -226,6 +290,12 @@ class TranscriptionService extends ChangeNotifier {
 
   @override
   void dispose() {
+    for (final backend in _injectedBackends.values) {
+      backend.dispose();
+    }
+    _injectedBackends.clear();
+    _gguf?.dispose();
+    _moonshine?.dispose();
     _whisper?.dispose();
     _gemma?.dispose();
     _nemotron?.dispose();

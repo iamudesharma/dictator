@@ -1,3 +1,4 @@
+import '../memory/model_memory_policy.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import '../settings/settings_service.dart';
@@ -10,6 +11,13 @@ import 'llm_output_sanitizer.dart';
 /// STT model when the user selected Gemma for audio.
 class GrammarService {
   final SettingsService _settings;
+  final ModelMemoryPolicy? memory;
+  final Future<InferenceModel?> Function()? sharedModelProvider;
+  Future<InferenceModel?> _sharedModel() => sharedModelProvider != null
+      ? sharedModelProvider!()
+      : Future.value(_sttSharedModel);
+  Future<T> _use<T>(Future<T> Function() action) =>
+      memory == null ? action() : memory!.run(action);
   final GrammarModelService Function() _grammarModelFactory;
 
   /// Set from [TranscriptionService.sharedGemmaModelForGrammar] when STT is Gemma.
@@ -17,7 +25,9 @@ class GrammarService {
 
   GrammarModelService? _cachedGrammarModel;
 
-  GrammarService(this._settings, GrammarModelService Function() grammarModelFactory)
+  GrammarService(
+      this._settings, GrammarModelService Function() grammarModelFactory,
+      {this.memory, this.sharedModelProvider})
       : _grammarModelFactory = grammarModelFactory;
 
   /// Convenience constructor that creates its own [GrammarModelService] on
@@ -29,7 +39,39 @@ class GrammarService {
     _sttSharedModel = model;
   }
 
-  Future<String> clean(String rawText) async {
+  Future<void> unloadModel() => _use(releaseIdleResources);
+
+  Future<void> releaseIdleResources() async {
+    _sttSharedModel = null;
+    await (_cachedGrammarModel ??= _grammarModelFactory()).unload();
+  }
+
+  Future<String> transform(String text, String instruction) =>
+      _use(() => _transform(text, instruction));
+
+  Future<String> _transform(String text, String instruction) async {
+    final service = _cachedGrammarModel ??= _grammarModelFactory();
+    final model =
+        await service.resolveTextModel(sttSharedModel: await _sharedModel());
+    if (model == null) throw StateError('The local text model is unavailable.');
+    final session = await model.createSession();
+    try {
+      await session.addQueryChunk(Message.text(
+          text:
+              '$instruction\nReturn ONLY the transformed text. No labels or explanations.\n\n$text'));
+      final result = await session.getResponse();
+      if (result.trim().isEmpty) {
+        throw StateError('The text model returned no response.');
+      }
+      return LlmOutputSanitizer.clean(result, originalText: text);
+    } finally {
+      await session.close();
+    }
+  }
+
+  Future<String> clean(String rawText) => _use(() => _clean(rawText));
+
+  Future<String> _clean(String rawText) async {
     if (!_settings.grammarEnabled) {
       debugPrint('[AuraScribe][Grammar] skipped — disabled in settings');
       return rawText;
@@ -46,7 +88,8 @@ class GrammarService {
     InferenceModel? model;
     try {
       final grammarModel = _cachedGrammarModel ??= _grammarModelFactory();
-      model = await grammarModel.resolveTextModel(sttSharedModel: _sttSharedModel);
+      model = await grammarModel.resolveTextModel(
+          sttSharedModel: await _sharedModel());
     } catch (e) {
       debugPrint('[AuraScribe][Grammar] model unavailable: $e');
       return rawText;

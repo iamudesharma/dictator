@@ -4,7 +4,22 @@ import 'package:flutter/services.dart';
 /// Dart-side bridge to the native Swift AccessibilityPlugin.
 /// Handles text insertion into the currently focused system-wide text field.
 class AccessibilityService {
+  bool terminalPaste = false;
+  bool restoreClipboard = true;
   static const _channel = MethodChannel('com.aurascribe/accessibility');
+
+  Future<Map<String, String>> frontmostApplication() async {
+    final value =
+        await _channel.invokeMapMethod<String, String>('frontmostApplication');
+    return value ?? {};
+  }
+
+  /// Pin the application and native focused element before showing any feedback.
+  Future<Map<String, String>> captureDictationTarget() async =>
+      await _channel.invokeMapMethod<String, String>('beginDictationTarget') ??
+      {};
+  Future<void> releaseDictationTarget() =>
+      _channel.invokeMethod<void>('endDictationTarget');
 
   /// Check if Accessibility permission has been granted.
   Future<bool> hasPermission() async {
@@ -21,11 +36,13 @@ class AccessibilityService {
 
   /// Open System Settings → Privacy & Security → Accessibility.
   Future<void> requestPermission() async {
-    debugPrint('[AuraScribe][Accessibility] requestPermission → opening System Settings');
+    debugPrint(
+        '[AuraScribe][Accessibility] requestPermission → opening System Settings');
     try {
       await _channel.invokeMethod('requestPermission');
     } catch (e, st) {
-      debugPrint('[AuraScribe][Accessibility] requestPermission failed: $e\n$st');
+      debugPrint(
+          '[AuraScribe][Accessibility] requestPermission failed: $e\n$st');
     }
   }
 
@@ -36,33 +53,43 @@ class AccessibilityService {
       '[AuraScribe][Accessibility] replaceSelectedText (${text.length} chars) → native',
     );
     try {
-      final result =
-          await _channel.invokeMethod<bool>('replaceSelectedText', {'text': text});
+      final result = await _channel.invokeMethod<bool>('replaceSelectedText', {
+        'text': text,
+        'terminalPaste': terminalPaste,
+        'restoreClipboard': restoreClipboard
+      });
       final usedAx = result ?? false;
       debugPrint(
         '[AuraScribe][Accessibility] replaceSelectedText native result: usedAx=$usedAx',
       );
       return usedAx;
     } catch (e, st) {
-      debugPrint('[AuraScribe][Accessibility] replaceSelectedText channel error: $e\n$st');
+      debugPrint(
+          '[AuraScribe][Accessibility] replaceSelectedText channel error: $e\n$st');
       return false;
     }
   }
 
   /// Insert [text] into the currently focused text field.
-  /// Returns true if AX insertion succeeded, false if clipboard fallback was used.
+  /// Returns true for AX insertion, false for native paste or Unicode input.
   Future<bool> insertText(String text) async {
     debugPrint(
       '[AuraScribe][Accessibility] insertText (${text.length} chars) → native',
     );
     try {
-      final result = await _channel.invokeMethod<bool>('insertText', {'text': text});
+      final result = await _channel.invokeMethod<bool>('insertText', {
+        'text': text,
+        'terminalPaste': terminalPaste,
+        'restoreClipboard': restoreClipboard
+      });
       final usedAx = result ?? false;
-      debugPrint('[AuraScribe][Accessibility] insertText native result: usedAx=$usedAx');
+      debugPrint(
+          '[AuraScribe][Accessibility] insertText native result: usedAx=$usedAx');
       return usedAx;
     } catch (e, st) {
-      debugPrint('[AuraScribe][Accessibility] insertText channel error: $e\n$st');
-      return false;
+      debugPrint(
+          '[AuraScribe][Accessibility] insertText channel error: $e\n$st');
+      rethrow;
     }
   }
 
@@ -72,10 +99,12 @@ class AccessibilityService {
     debugPrint('[AuraScribe][Accessibility] copySelectedText → native');
     try {
       final result = await _channel.invokeMethod<String>('copySelectedText');
-      debugPrint('[AuraScribe][Accessibility] copySelectedText native result: ${result?.length ?? 0} chars');
+      debugPrint(
+          '[AuraScribe][Accessibility] copySelectedText native result: ${result?.length ?? 0} chars');
       return result;
     } catch (e, st) {
-      debugPrint('[AuraScribe][Accessibility] copySelectedText channel error: $e\n$st');
+      debugPrint(
+          '[AuraScribe][Accessibility] copySelectedText channel error: $e\n$st');
       return null;
     }
   }

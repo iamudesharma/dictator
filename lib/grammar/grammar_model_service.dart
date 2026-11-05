@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
-import 'package:path_provider/path_provider.dart';
+import '../storage/project_storage.dart';
 
 import '../settings/settings_service.dart';
 
@@ -16,7 +16,7 @@ class GrammarModelService {
   static const _downloadUrl =
       'https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/$_fileName';
 
-  /// flutter_gemma stores models under Application Support/flutter_gemma/.
+  /// Weight files and compiled caches stay inside project storage.
   static const _minValidBytes = 200 * 1024 * 1024; // ~200 MB
 
   final SettingsService _settings;
@@ -36,9 +36,11 @@ class GrammarModelService {
   ///
   /// Pass [sttSharedModel] when audio STT is Gemma 4 E2B so we reuse one model.
   /// Otherwise loads Gemma 3 270M IT (Whisper / Nemotron path).
-  Future<InferenceModel?> resolveTextModel({InferenceModel? sttSharedModel}) async {
+  Future<InferenceModel?> resolveTextModel(
+      {InferenceModel? sttSharedModel}) async {
     if (sttSharedModel != null) {
-      debugPrint('[AuraScribe][GrammarModel] Reusing Gemma STT model for text task');
+      debugPrint(
+          '[AuraScribe][GrammarModel] Reusing Gemma STT model for text task');
       return sttSharedModel;
     }
     await ensureLoaded();
@@ -61,111 +63,37 @@ class GrammarModelService {
 
       await _installGemma270m();
       _model = await FlutterGemma.getActiveModel(
-        maxTokens: 512,
+        maxTokens: 2048,
         maxConcurrentSessions: 1,
         preferredBackend: PreferredBackend.cpu,
       );
       _loaded = true;
       debugPrint('[AuraScribe][GrammarModel] ✅ Gemma 3 270M IT ready (CPU)');
-    } catch (e) {
-      debugPrint('[AuraScribe][GrammarModel] ❌ Load failed, retrying clean install: $e');
-      await _purgeBrokenInstall();
-      await _installGemma270m(force: true);
-      _model = await FlutterGemma.getActiveModel(
-        maxTokens: 512,
-        maxConcurrentSessions: 1,
-        preferredBackend: PreferredBackend.cpu,
-      );
-      _loaded = true;
-      debugPrint('[AuraScribe][GrammarModel] ✅ Gemma 3 270M IT ready after retry');
     } finally {
       _loading = false;
       _loadInFlight = null;
     }
   }
 
-  Future<void> _installGemma270m({bool force = false}) async {
-    if (!force) {
-      await _purgeIfStaleMetadata();
-    } else {
-      await _purgeBrokenInstall();
-    }
-
-    final token = _resolveHfToken();
-    debugPrint('[AuraScribe][GrammarModel] Installing Gemma 3 270M (litertlm)…');
+  Future<void> _installGemma270m() async {
+    final path = await ProjectStorage.instance.download(
+        folder: 'grammar',
+        name: _fileName,
+        url: Uri.parse(_downloadUrl),
+        minBytes: _minValidBytes,
+        token: _settings.hfToken.isNotEmpty
+            ? _settings.hfToken
+            : Platform.environment['HF_TOKEN']);
     await FlutterGemma.installModel(
-      modelType: ModelType.gemmaIt,
-      fileType: ModelFileType.litertlm,
-    )
-        .fromNetwork(_downloadUrl, token: token.isEmpty ? null : token)
+            modelType: ModelType.gemmaIt, fileType: ModelFileType.litertlm)
+        .fromFile(path)
         .install();
-
-    final path = await _expectedModelPath();
-    final size = await File(path).length();
-    if (size < _minValidBytes) {
-      throw Exception(
-        'Gemma 3 270M download looks incomplete ($size bytes at $path)',
-      );
-    }
-    debugPrint('[AuraScribe][GrammarModel] Verified model on disk ($size bytes)');
   }
 
-  Future<String> _expectedModelPath() async {
-    final supportDir = await getApplicationSupportDirectory();
-    return '${supportDir.path}/flutter_gemma/$_fileName';
-  }
-
-  /// flutter_gemma metadata can say "installed" while the file was deleted.
-  Future<void> _purgeIfStaleMetadata() async {
-    final path = await _expectedModelPath();
-    final file = File(path);
-    final onDisk = await file.exists() && await file.length() >= _minValidBytes;
-    if (onDisk) return;
-
-    final registered = await FlutterGemma.isModelInstalled(_fileName);
-    if (registered || !onDisk) {
-      debugPrint(
-        '[AuraScribe][GrammarModel] Purging stale install '
-        '(registered=$registered, onDisk=$onDisk, path=$path)',
-      );
-      await _purgeBrokenInstall();
-    }
-  }
-
-  String _resolveHfToken() {
-    if (_settings.hfToken.isNotEmpty) return _settings.hfToken;
-    return Platform.environment['HF_TOKEN'] ?? '';
-  }
-
-  Future<void> _purgeBrokenInstall() async {
-    // Metadata id is the full filename; older builds may have used the base name.
-    for (final id in [_fileName, 'gemma3-270m-it-q8']) {
-      try {
-        await FlutterGemma.uninstallModel(id);
-        debugPrint('[AuraScribe][GrammarModel] Uninstalled $id via flutter_gemma');
-      } catch (_) {}
-    }
-
-    try {
-      final path = await _expectedModelPath();
-      final file = File(path);
-      if (await file.exists()) {
-        await file.delete();
-        debugPrint('[AuraScribe][GrammarModel] Deleted $path');
-      }
-    } catch (e) {
-      debugPrint('[AuraScribe][GrammarModel] File delete skipped: $e');
-    }
-
-    try {
-      final supportDir = await getApplicationSupportDirectory();
-      final legacyDir = Directory('${supportDir.path}/models/gemma_3_270m');
-      if (await legacyDir.exists()) {
-        await legacyDir.delete(recursive: true);
-        debugPrint('[AuraScribe][GrammarModel] Removed legacy cache at ${legacyDir.path}');
-      }
-    } catch (e) {
-      debugPrint('[AuraScribe][GrammarModel] Legacy cache purge skipped: $e');
-    }
+  Future<void> unload() async {
+    await _loadInFlight;
+    await _model?.close();
+    _model = null;
+    _loaded = false;
   }
 }

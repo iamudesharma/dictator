@@ -1,3 +1,4 @@
+import '../shared/stt_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import '../transcription/transcription_service.dart';
@@ -37,12 +38,22 @@ class SmartCommandService {
     this._transcription,
   );
 
-  Future<String> execute({
+  Future<String> execute(
+      {required SmartCommandType type,
+      required String text,
+      String? customPrompt}) {
+    Future<String> run() =>
+        _execute(type: type, text: text, customPrompt: customPrompt);
+    return _transcription.memory?.run(run) ?? run();
+  }
+
+  Future<String> _execute({
     required SmartCommandType type,
     required String text,
     String? customPrompt,
   }) async {
-    debugPrint('[AuraScribe][SmartCommand] execute() entry: type = $type, text length = ${text.length}');
+    debugPrint(
+        '[AuraScribe][SmartCommand] execute() entry: type = $type, text length = ${text.length}');
     if (text.trim().isEmpty) {
       debugPrint('[AuraScribe][SmartCommand] Text is empty, returning early');
       return text;
@@ -51,6 +62,11 @@ class SmartCommandService {
     // Gemma STT → reuse multimodal model; Whisper / Nemotron → Gemma 3 270M.
     InferenceModel? model;
     try {
+      if (_transcription.activeEngine == SttEngine.gemma &&
+          !_transcription.isLoaded) {
+        final error = await _transcription.ensureLoaded();
+        if (error != null) throw StateError(error);
+      }
       final modelService = _cachedModelService ??= _grammarModelFactory();
       model = await modelService.resolveTextModel(
         sttSharedModel: _transcription.sharedGemmaModelForGrammar,
@@ -80,8 +96,7 @@ class SmartCommandService {
             'Keep the same meaning. $outputRules';
         break;
       case SmartCommandType.translateToHindi:
-        systemPrompt =
-            'Translate the text into natural Hindi. $outputRules';
+        systemPrompt = 'Translate the text into natural Hindi. $outputRules';
         break;
       case SmartCommandType.summarize:
         systemPrompt =
@@ -96,7 +111,8 @@ class SmartCommandService {
         break;
     }
 
-    debugPrint('[AuraScribe][SmartCommand] Executing $type on ${text.length} chars…');
+    debugPrint(
+        '[AuraScribe][SmartCommand] Executing $type on ${text.length} chars…');
 
     final session = await model.createSession();
     try {

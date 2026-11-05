@@ -14,6 +14,8 @@ class VadService {
   final SettingsService _settings;
 
   SilenceDetectedCallback? onSilenceDetected;
+  SilenceDetectedCallback? onMaxDuration;
+  ValueChanged<double>? onLevel;
 
   Timer? _pollTimer;
   int _silentMs = 0;
@@ -55,24 +57,28 @@ class VadService {
           '[AuraScribe][VAD] max recording ${_settings.maxRecordingSeconds}s reached → stopping',
         );
         stop();
-        onSilenceDetected?.call();
+        onMaxDuration?.call();
         return;
       }
 
       final amp = await _audio.getAmplitude();
       final current = amp.current; // dBFS, negative
+      onLevel?.call(((current + 60) / 60).clamp(0.0, 1.0));
 
       final isSilent = current < _settings.vadThreshold;
 
       if (!isSilent) {
         if (!_hasSpeech) {
-          debugPrint('[AuraScribe][VAD] speech detected (${current.toStringAsFixed(1)} dBFS)');
+          debugPrint(
+              '[AuraScribe][VAD] speech detected (${current.toStringAsFixed(1)} dBFS)');
         }
         _hasSpeech = true;
         _silentMs = 0;
       } else if (_hasSpeech) {
         _silentMs += _pollInterval.inMilliseconds;
-        if (_silentMs >= _settings.vadSilenceDuration) {
+        if (_settings.autoStop &&
+            !_settings.holdShortcut &&
+            _silentMs >= _settings.vadSilenceDuration) {
           debugPrint(
             '[AuraScribe][VAD] silence ${_silentMs}ms after speech → triggering stop',
           );

@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import '../storage/project_storage.dart';
 
 import 'stt_backend.dart';
+import '../settings/settings_service.dart';
 
 /// Gemma 4 E2B multimodal STT via [flutter_gemma] (audio → text).
 ///
@@ -20,6 +20,7 @@ class GemmaTranscriptionBackend implements SttBackend {
       'Transcribe the following speech segment in English into English text. Use digits for numbers. Output only the transcription, nothing else.';
 
   final String _prompt;
+  final SettingsService settings;
 
   InferenceModel? _model;
   bool _loaded = false;
@@ -30,7 +31,8 @@ class GemmaTranscriptionBackend implements SttBackend {
   String? _cachePath;
   String? get modelCachePath => _cachePath;
 
-  GemmaTranscriptionBackend({String? prompt}) : _prompt = prompt ?? _defaultPrompt;
+  GemmaTranscriptionBackend(this.settings, {String? prompt})
+      : _prompt = prompt ?? _defaultPrompt;
 
   @override
   bool get isLoaded => _loaded;
@@ -57,8 +59,8 @@ class GemmaTranscriptionBackend implements SttBackend {
       debugPrint('[AuraScribe][Gemma] Initializing flutter_gemma…');
       await FlutterGemma.initialize();
 
-      final supportDir = await getApplicationSupportDirectory();
-      final modelDir = Directory('${supportDir.path}/models/gemma_4_e2b');
+      final modelDir =
+          await ProjectStorage.instance.directory('models/gemma_4_e2b');
 
       final infoFile = File('${modelDir.path}/model_info.json');
       var needsClean = true;
@@ -73,7 +75,8 @@ class GemmaTranscriptionBackend implements SttBackend {
       }
 
       if (needsClean) {
-        debugPrint('[AuraScribe][Gemma] Repo change or stale files. Cleaning $modelDir…');
+        debugPrint(
+            '[AuraScribe][Gemma] Repo change or stale files. Cleaning $modelDir…');
         if (await modelDir.exists()) {
           await modelDir.delete(recursive: true);
         }
@@ -114,7 +117,8 @@ class GemmaTranscriptionBackend implements SttBackend {
       _loaded = true;
       _statusMessage = '';
       onProgress?.call();
-      debugPrint('[AuraScribe][Gemma] ✅ Ready (downloaded on demand, ~16 GB RAM recommended)');
+      debugPrint(
+          '[AuraScribe][Gemma] ✅ Ready (downloaded on demand, ~16 GB RAM recommended)');
       return null;
     } catch (e) {
       debugPrint('[AuraScribe][Gemma] ❌ Load error: $e');
@@ -178,75 +182,26 @@ class GemmaTranscriptionBackend implements SttBackend {
     _statusMessage = '';
   }
 
-  Future<void> _downloadFileIfNeeded({
-    required String url,
-    required String savePath,
-    required String fileName,
-  }) async {
-    final file = File(savePath);
-    if (await file.exists()) {
-      final localLength = await file.length();
-      if (localLength > 0) {
-        try {
-          final headResponse = await http.head(Uri.parse(url));
-          final remoteLengthHeader = headResponse.headers['content-length'];
-          if (remoteLengthHeader != null) {
-            final remoteLength = int.parse(remoteLengthHeader);
-            if (localLength == remoteLength) {
-              debugPrint('[AuraScribe][Gemma] $fileName already exists and matches remote size ($localLength bytes).');
-              return;
-            } else {
-              debugPrint('[AuraScribe][Gemma] File size mismatch for $fileName (local: $localLength, remote: $remoteLength). Deleting and re-downloading…');
-              await file.delete();
-            }
-          } else {
-            debugPrint('[AuraScribe][Gemma] $fileName already exists (cannot verify size, skipping download).');
-            return;
-          }
-        } catch (e) {
-          debugPrint('[AuraScribe][Gemma] HEAD check failed for $fileName: $e. Assuming existing file is fine.');
-          return;
-        }
-      }
-    }
-
-    debugPrint('[AuraScribe][Gemma] Downloading $url…');
-    _statusMessage = 'Downloading $fileName…';
-    onProgress?.call();
-
-    final request = http.Request('GET', Uri.parse(url));
-    final response = await http.Client().send(request);
-
-    if (response.statusCode == 200) {
-      final totalBytes = response.contentLength ?? 0;
-      var downloadedBytes = 0;
-      final sink = file.openWrite();
-
-      await response.stream.forEach((chunk) {
-        sink.add(chunk);
-        downloadedBytes += chunk.length;
-        if (totalBytes > 0) {
-          final progressPercent = (downloadedBytes / totalBytes * 100).toStringAsFixed(1);
-          final mbDownloaded = (downloadedBytes / (1024 * 1024)).toStringAsFixed(1);
-          final mbTotal = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-          _statusMessage = 'Downloading $fileName: $progressPercent% ($mbDownloaded/$mbTotal MB)';
+  Future<void> _downloadFileIfNeeded(
+      {required String url,
+      required String savePath,
+      required String fileName}) async {
+    await ProjectStorage.instance.download(
+        folder: 'gemma_4_e2b',
+        name: fileName,
+        url: Uri.parse(url),
+        token: settings.hfToken.isNotEmpty
+            ? settings.hfToken
+            : Platform.environment['HF_TOKEN'],
+        onProgress: (message) {
+          _statusMessage = message;
           onProgress?.call();
-        } else {
-          final mbDownloaded = (downloadedBytes / (1024 * 1024)).toStringAsFixed(1);
-          _statusMessage = 'Downloading $fileName: $mbDownloaded MB';
-          onProgress?.call();
-        }
-      });
-      await sink.close();
-      debugPrint('[AuraScribe][Gemma] Saved file to $savePath');
-    } else {
-      throw Exception('Failed to download $url (Status: ${response.statusCode})');
-    }
+        });
   }
 
-  Future<void> _deleteQuietly(File f) async {
+  Future<void> _deleteQuietly(File file) async {
     try {
-      if (await f.exists()) await f.delete();
+      if (await file.exists()) await file.delete();
     } catch (_) {}
   }
 }

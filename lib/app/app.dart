@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app/dictation_orchestrator.dart';
-import '../shared/notification_overlay.dart';
+import '../shared/app_theme.dart';
 import '../shared/smart_command_hud.dart';
 import '../settings/settings_screen.dart';
 import '../settings/settings_service.dart';
@@ -29,25 +29,25 @@ class AuraScribeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AuraScribe',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFF9B59F5),
-          surface: const Color(0xFF1C1C1E),
-        ),
-        useMaterial3: true,
-      ),
-      home: AuraScribeHome(
-        orchestrator: orchestrator,
-        settings: settings,
-        hotkeyService: hotkeyService,
-        accessibility: accessibility,
-        transcriptionService: transcriptionService,
-        grammarService: grammarService,
-      ),
-    );
+    return ValueListenableBuilder<bool>(
+        valueListenable: orchestrator.settingsTreeVisible,
+        builder: (context, visible, _) => visible
+            ? MaterialApp(
+                title: 'AuraScribe',
+                debugShowCheckedModeBanner: false,
+                theme: auraTheme(Brightness.light),
+                darkTheme: auraTheme(Brightness.dark),
+                themeMode: ThemeMode.system,
+                home: AuraScribeHome(
+                  orchestrator: orchestrator,
+                  settings: settings,
+                  hotkeyService: hotkeyService,
+                  accessibility: accessibility,
+                  transcriptionService: transcriptionService,
+                  grammarService: grammarService,
+                ),
+              )
+            : const SizedBox.shrink());
   }
 }
 
@@ -72,23 +72,25 @@ class AuraScribeHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: orchestrator.isHudOnly ? Colors.transparent : const Color(0xFF1C1C1E),
+      backgroundColor: Colors.transparent,
       body: ListenableBuilder(
         listenable: orchestrator,
         builder: (context, _) {
           return Stack(
             children: [
-              if (orchestrator.currentView == AppView.smartCommands)
+              if (!orchestrator.settingsTreeVisible.value)
+                const SizedBox.shrink()
+              else if (orchestrator.currentView == AppView.smartCommands)
                 SmartCommandHUD(orchestrator: orchestrator)
-              else if (!orchestrator.isHudOnly)
+              else
                 SettingsScreen(
+                  orchestrator: orchestrator,
                   settings: settings,
                   hotkeyService: hotkeyService,
                   accessibility: accessibility,
                   transcriptionService: transcriptionService,
                   grammarService: grammarService,
                 ),
-              NotificationOverlay(orchestrator: orchestrator),
             ],
           );
         },
