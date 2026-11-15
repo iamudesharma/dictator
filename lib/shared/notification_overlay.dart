@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../app/dictation_orchestrator.dart';
 import 'dictation_indicator.dart';
 import 'dictation_state.dart';

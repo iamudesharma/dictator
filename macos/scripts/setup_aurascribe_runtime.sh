@@ -26,3 +26,15 @@ if [[ ! -x "$moonshine" || "$project_root/tool/moonshine_worker.dart" -nt "$moon
 fi
 cp "$moonshine" "$resources/aurascribe-moonshine"
 /usr/bin/codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$resources/aurascribe-moonshine"
+
+# Direct FFI speech runtime; retain the CLI for optional tools/diarization.
+native="$project_root/.aurascribe/tools/native"
+if [[ "$project_root/tool/native_patches/accelerate_gemv.patch" -nt "$native/libtranscribe.0.4.1.dylib" || ! -f "$native/libaurascribe_audio.dylib" || "$project_root/macos/native/pcm_reader.c" -nt "$native/libaurascribe_audio.dylib" || "$project_root/macos/native/pcm_reader.h" -nt "$native/libaurascribe_audio.dylib" || ! -f "$native/libtranscribe.0.4.1.dylib" || "$project_root/tool/build_transcribe_ffi.sh" -nt "$native/libtranscribe.0.4.1.dylib" ]]; then
+  bash "$project_root/tool/build_transcribe_ffi.sh"
+fi
+native_bundle="${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/aurascribe-native"
+mkdir -p "$native_bundle"
+cp "$native/"*.dylib "$native_bundle/"
+for library in "$native_bundle/"*.dylib; do
+  /usr/bin/codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$library"
+done

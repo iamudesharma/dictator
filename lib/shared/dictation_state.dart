@@ -1,3 +1,5 @@
+import '../l10n/app_localizations.dart';
+
 enum DictationState {
   idle,
   recording,
@@ -14,17 +16,17 @@ extension DictationStateX on DictationState {
   String get label {
     switch (this) {
       case DictationState.idle:
-        return 'Idle';
+        return tr('Idle');
       case DictationState.recording:
-        return 'Recording…';
+        return tr('Recording…');
       case DictationState.transcribing:
-        return 'Transcribing…';
+        return tr('Transcribing…');
       case DictationState.grammarCleanup:
-        return 'Cleaning up…';
+        return tr('Cleaning up…');
       case DictationState.inserting:
-        return 'Inserting…';
+        return tr('Inserting…');
       case DictationState.error:
-        return 'Error';
+        return tr('Error');
     }
   }
 }

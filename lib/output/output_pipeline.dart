@@ -8,7 +8,10 @@ enum OutputStepKind {
   translate,
   instruction,
   lowercase,
-  uppercase
+  uppercase,
+  removeFillers,
+  spokenSymbols,
+  smartSpacing
 }
 
 class OutputStep {
@@ -25,17 +28,22 @@ class OutputProfile {
   final String application;
   final List<OutputStep> steps;
   final bool includeDefault;
+  final String? speechModel, language;
   const OutputProfile(this.application, this.steps,
-      {this.includeDefault = true});
+      {this.includeDefault = true, this.speechModel, this.language});
   factory OutputProfile.fromJson(Map<String, dynamic> json) => OutputProfile(
       json['application'] as String,
       (json['steps'] as List)
           .map((s) => OutputStep.fromJson(Map<String, dynamic>.from(s as Map)))
           .toList(),
-      includeDefault: json['includeDefault'] as bool? ?? true);
+      includeDefault: json['includeDefault'] as bool? ?? true,
+      speechModel: json['speechModel'] as String?,
+      language: json['language'] as String?);
   Map<String, dynamic> toJson() => {
         'application': application,
         'includeDefault': includeDefault,
+        'speechModel': speechModel,
+        'language': language,
         'steps': steps.map((s) => s.toJson()).toList()
       };
 }
@@ -124,6 +132,17 @@ class OutputProcessor {
         OutputStepKind.instruction => await transform(text, step.value),
         OutputStepKind.lowercase => text.toLowerCase(),
         OutputStepKind.uppercase => text.toUpperCase(),
+        OutputStepKind.removeFillers => text
+            .replaceAll(
+                RegExp(r'\b(um|uh|erm)\b[, ]*', caseSensitive: false), '')
+            .trim(),
+        OutputStepKind.spokenSymbols => replaceWords(text,
+                'at sign=@\nhashtag=#\nopen parenthesis=(\nclose parenthesis=)')
+            .replaceAll(
+                RegExp(r'\bnew paragraph\b', caseSensitive: false), '\n\n'),
+        OutputStepKind.smartSpacing => text
+            .replaceAllMapped(RegExp(r'[ \t]+([,.;:!?])'), (m) => m[1]!)
+            .replaceAll(RegExp(r'[ \t]{2,}'), ' '),
       };
       if (text.trim().isEmpty) {
         throw StateError(

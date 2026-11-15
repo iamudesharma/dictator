@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import '../shared/wav_header_helper.dart';
 
 class PcmWave {
@@ -27,10 +28,53 @@ class PcmWave {
         }
         if (id == 'fmt ') {
           if (size < 16) throw const FormatException('Invalid WAV format.');
-          final format = ByteData.sublistView(await file.read(16));
-          validFormat = format.getUint16(0, Endian.little) == 1 &&
+          final bytes = await file.read(size.clamp(16, 40));
+          if (bytes.length < 16) {
+            throw const FormatException('Incomplete WAV format.');
+          }
+          final format = ByteData.sublistView(bytes);
+          final tag = format.getUint16(0, Endian.little);
+          var integerPcm = tag == 1;
+          // AVCaptureAudioFileOutput writes WAVE_FORMAT_EXTENSIBLE, even
+          // for ordinary mono PCM16. Validate its subtype rather than treating
+          // every extensible file (including float audio) as integer samples.
+          if (tag == 0xfffe && bytes.length >= 40) {
+            final extensionBytes = format.getUint16(16, Endian.little);
+            integerPcm =
+                extensionBytes >= 22 &&
+                18 + extensionBytes <= size &&
+                format.getUint16(18, Endian.little) == 16;
+            const pcmSubtype = [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0x10,
+              0,
+              0x80,
+              0,
+              0,
+              0xaa,
+              0,
+              0x38,
+              0x9b,
+              0x71,
+            ];
+            for (var i = 0; i < pcmSubtype.length; i++) {
+              if (format.getUint8(24 + i) != pcmSubtype[i]) {
+                integerPcm = false;
+                break;
+              }
+            }
+          }
+          validFormat =
+              integerPcm &&
               format.getUint16(2, Endian.little) == 1 &&
               format.getUint32(4, Endian.little) == 16000 &&
+              format.getUint32(8, Endian.little) == 32000 &&
+              format.getUint16(12, Endian.little) == 2 &&
               format.getUint16(14, Endian.little) == 16;
         }
         if (id == 'data') {

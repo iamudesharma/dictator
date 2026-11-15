@@ -1,3 +1,7 @@
+> November 13 update: the historical GGUF per-clip CPU-worker measurements below
+> are superseded for current GGUF dictation by retained Metal sessions. See
+> [the new live benchmark](metal-native-interop.md). Moonshine's low-memory policy remains.
+
 # Memory improvements and verification
 
 2026-11-04, this Apple silicon Mac with 8 GiB RAM. The optimization work did not

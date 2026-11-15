@@ -4,10 +4,14 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.14.0 <4.0.0'
+  flutter: '>=3.50.0'
 
 dependencies:
   flutter:
+    sdk: flutter
+
+  flutter_localizations:
     sdk: flutter
 
   # Menu bar tray
@@ -38,7 +42,9 @@ dependencies:
   path_provider_platform_interface: ^2.1.3
   crypto: ^3.0.8
   ffi: ^2.2.0
-
+  uni_platform: ^0.1.3
+  material_ui: ^1.11.0
+  cupertino_ui: ^1.1.6
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -47,6 +53,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/l10n/
     - assets/sounds/
     - assets/tray_icon.png
     - assets/tray_icon_recording.png

@@ -1,0 +1,24 @@
+exclude-all-by-default: true
+name: TranscribeBindings
+description: 'Generated bindings to pinned transcribe.cpp 0.4.1. Regenerate with tool/generate_speech_bindings.sh.'
+output: lib/transcription/native/transcribe_bindings.g.dart
+headers:
+  entry-points:
+    - .reference/transcribe.cpp/include/transcribe.h
+    - macos/native/pcm_reader.h
+functions:
+  include:
+    - 'aurascribe_pcm_read'
+    - 'transcribe_(model_load_params_init|model_load_file|model_free|model_backend|session_params_init|session_init|session_free|run_params_init|run|full_text|returned_timestamp_kind|n_segments|n_words|segment_init|word_init|get_segment|get_word|init_backends_default|version|version_commit|status_string)'
+structs:
+  include:
+    - 'transcribe_(model_load_params|session_params|run_params|segment|word)'
+enums:
+  include:
+    - 'transcribe_.*'
+preamble: |
+  // ignore_for_file: type=lint, unused_element, unused_field
+
+macros:
+  include:
+    - 'TRANSCRIBE_VERSION_.*'

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:record/record.dart';
@@ -118,16 +118,18 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     await dir.delete(recursive: true);
   });
-  test('early hold release during model preparation never opens microphone',
+  test(
+      'cold GGUF capture starts before preparation and hold release remains responsive',
       () async {
     final pending = orchestrator.startHeldDictation();
     await model.entered.future;
-    expect(orchestrator.isPreparing, isTrue);
+    expect(orchestrator.state, DictationState.recording);
+    expect(audio.starts, 1);
     await orchestrator.startHeldDictation(); // Ignore key repeat.
     await orchestrator.stopHeldDictation();
     model.barrier.complete();
     await pending;
-    expect(audio.starts, 0);
+    expect(audio.starts, 1);
     expect(orchestrator.state, DictationState.idle);
     expect(orchestrator.isPreparing, isFalse);
   });
@@ -163,7 +165,7 @@ void main() {
     expect(calls.indexOf('beginDictationTarget'),
         lessThan(calls.indexOf('showDictationIndicator')));
     // There is deliberately no window_manager mock: using it would fail startup.
-    expect(orchestrator.isPreparing, isTrue);
+    expect(orchestrator.state, DictationState.recording);
     await orchestrator.stopHeldDictation();
     model.barrier.complete();
     await pending;

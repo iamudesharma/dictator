@@ -3,6 +3,7 @@ import FlutterMacOS
 import ServiceManagement
 import Security
 import CoreAudio
+import IOKit.hidsystem
 import Carbon
 import UniformTypeIdentifiers
 
@@ -79,7 +80,7 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
         case "beginAudioOutput":
             do {
                 let args = call.arguments as? [String: Any] ?? [:]
-                try audioOutput.begin(mode: args["mode"] as? String ?? "unchanged", level: args["level"] as? Double ?? 0.2)
+                try audioOutput.begin(pauseBrowser: args["pauseBrowser"] as? Bool ?? false, speakersOnly: args["speakersOnly"] as? Bool ?? false, mode: args["mode"] as? String ?? "unchanged", level: args["level"] as? Double ?? 0.2)
                 result(nil)
             } catch { result(FlutterError(code: "AUDIO_OUTPUT", message: error.localizedDescription, details: nil)) }
         case "restoreAudioOutput":
@@ -166,8 +167,13 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
             print("[AccessibilityPlugin] insertText called (\(text.count) chars)")
             terminalPaste = args["terminalPaste"] as? Bool ?? false
             restoreClipboard = args["restoreClipboard"] as? Bool ?? true
-            let pid = dictationTargetPID != 0 ? dictationTargetPID : (NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0)
-            performInsertion(text, pid: pid, element: dictationTargetElement, result: result)
+            let front = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
+            let original = args["returnToApp"] as? Bool ?? true
+            let pid = original && dictationTargetPID != 0 ? dictationTargetPID : front
+            let captured = pid == dictationTargetPID ? dictationTargetElement : nil
+            let element = captured ?? focusedElement(in: pid)
+            let output = args["smartSpacing"] as? Bool == true ? spacedText(text, element: element) : text
+            performInsertion(output, pid: pid, element: captured, result: result)
 
         case "replaceSelectedText":
             guard let args = call.arguments as? [String: Any],
@@ -181,6 +187,16 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
             restoreClipboard = args["restoreClipboard"] as? Bool ?? true
             performInsertion(text, pid: lastTargetAppPID, element: nil, result: result)
 
+        case "selectFocusedText":
+            guard let element = dictationTargetElement else { result(nil); return }
+            var roleValue: CFTypeRef?, value: CFTypeRef?
+            _ = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
+            guard let role = roleValue as? String, [kAXTextFieldRole as String, kAXTextAreaRole as String].contains(role),
+                  AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success,
+                  let text = value as? String else { result(nil); return }
+            var range = CFRange(location: 0, length: (text as NSString).length)
+            guard let selection = AXValueCreate(.cfRange, &range), AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, selection) == .success else { result(nil); return }
+            result(text)
         case "copySelectedText":
             result(copySelectedText())
         default:
@@ -355,6 +371,21 @@ class AccessibilityPlugin: NSObject, FlutterPlugin {
         attempt()
     }
 
+    private func spacedText(_ text: String, element: AXUIElement?) -> String {
+        guard let element = element, let first = text.first, first.isLetter || first.isNumber else { return text }
+        var rangeValue: CFTypeRef?, contentValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
+              let raw = rangeValue, CFGetTypeID(raw) == AXValueGetTypeID(),
+              AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &contentValue) == .success,
+              let content = contentValue as? String else { return text }
+        var range = CFRange()
+        guard AXValueGetValue(raw as! AXValue, .cfRange, &range), range.length == 0, range.location > 0 else { return text }
+        let string = content as NSString
+        guard range.location <= string.length else { return text }
+        let previous = string.substring(with: string.rangeOfComposedCharacterSequence(at: range.location - 1))
+        return previous.last.map { $0.isLetter || $0.isNumber } == true ? " " + text : text
+    }
+
     private func insertTextInFocusedElement(_ text: String, element: AXUIElement?, result: @escaping FlutterResult) throws {
         // AXSelectedText may report success without updating a web editor's DOM
         // or firing its input events. Use the application's normal input path.
@@ -442,10 +473,31 @@ class HotkeyPlugin: NSObject, FlutterPlugin {
     private var globalMonitor: Any?
     private var localMonitor: Any?
     
+    private var auxiliaryGlobal: Any?
+    private var auxiliaryLocal: Any?
     private var modifierKeyCode: UInt16?
     private var anyOption = false
     private var holdMode = true
     private var modifierDown = false
+    private var capsEnabled = false, capsOriginal = false, capsUpdating = false
+    private var capsIndicator = false
+    private func capsLock(_ state: Bool? = nil) -> Bool {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOHIDSystem"))
+        guard service != 0 else { return false }
+        defer { IOObjectRelease(service) }
+        var connection: io_connect_t = 0
+        guard IOServiceOpen(service, mach_task_self_, UInt32(kIOHIDParamConnectType), &connection) == KERN_SUCCESS else { return false }
+        defer { IOServiceClose(connection) }
+        var value = false
+        _ = IOHIDGetModifierLockState(connection, Int32(kIOHIDCapsLockState), &value)
+        if let state = state { _ = IOHIDSetModifierLockState(connection, Int32(kIOHIDCapsLockState), state) }
+        return value
+    }
+    private func setCapsLight(_ value: Bool) {
+        capsUpdating = true; _ = capsLock(value)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.capsUpdating = false }
+    }
+    private let nativeShortcuts = NativeShortcutMonitor()
     private var modifierActive = false
     private var holdTimer: DispatchWorkItem?
 
@@ -469,6 +521,36 @@ class HotkeyPlugin: NSObject, FlutterPlugin {
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+        case "setRecordingCapsLock":
+            let active = call.arguments as? Bool ?? false
+            if capsEnabled && active != capsIndicator { capsIndicator = active; setCapsLight(active) }
+            result(nil)
+        case "configureNativeShortcuts":
+            do {
+                try nativeShortcuts.configure(call.arguments as? [[String: Any]] ?? []) { action, down in
+                    HotkeyPlugin.channel?.invokeMethod("onNativeShortcut", arguments: ["action": action, "down": down])
+                }; result(nil)
+            } catch { result(FlutterError(code: "SHORTCUT_PERMISSION", message: error.localizedDescription, details: nil)) }
+        case "configureAuxiliary":
+            if let monitor = auxiliaryGlobal { NSEvent.removeMonitor(monitor) }; auxiliaryGlobal = nil
+            if let monitor = auxiliaryLocal { NSEvent.removeMonitor(monitor) }; auxiliaryLocal = nil
+            let args = call.arguments as? [String: Any] ?? [:]
+            let caps = args["capsLock"] as? Bool ?? false, button = args["mouseButton"] as? Int ?? -1
+            if caps && !capsEnabled { capsOriginal = capsLock(); setCapsLight(capsIndicator) }
+            if !caps && capsEnabled { setCapsLight(capsOriginal) }
+            capsEnabled = caps
+            let handler: (NSEvent) -> Void = { [weak self] event in
+                guard let self = self, !self.capsUpdating else { return }
+                if (caps && event.type == .flagsChanged && event.keyCode == 57) ||
+                   (event.type == .otherMouseDown && button >= 2 && event.buttonNumber == button) {
+                    HotkeyPlugin.channel?.invokeMethod("onAuxiliaryToggle", arguments: nil)
+                }
+            }
+            if caps || button >= 2 {
+                auxiliaryGlobal = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged, .otherMouseDown], handler: handler)
+                auxiliaryLocal = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .otherMouseDown]) { event in handler(event); return event }
+            }
+            result(nil)
         case "startModifierListening":
             guard let args = call.arguments as? [String: Any],
                   let code = args["keyCode"] as? Int,
@@ -626,6 +708,22 @@ class HotkeyPlugin: NSObject, FlutterPlugin {
 /// A crash-recoverable volume lease on the original output device. A manual
 /// volume change wins: restore only values still equal to the ones we applied.
 private final class AudioOutputController {
+    private var pausedBrowser: String?
+    private func browserScript(_ id: String, _ javascript: String, allTabs: Bool = false) -> Bool {
+        // Both arguments originate in this class, never from a transcript.
+        let escaped = javascript.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let command: String
+        if allTabs {
+            let operation = id == "com.apple.Safari" ? "do JavaScript \"\(escaped)\" in t" : "execute t javascript \"\(escaped)\""
+            command = "repeat with w in windows\nrepeat with t in tabs of w\ntry\n\(operation)\nend try\nend repeat\nend repeat"
+        } else {
+            command = id == "com.apple.Safari" ? "do JavaScript \"\(escaped)\" in current tab of front window" : "execute active tab of front window javascript \"\(escaped)\""
+        }
+        var error: NSDictionary?
+        NSAppleScript(source: "tell application id \"\(id)\"\n\(command)\nend tell")?.executeAndReturnError(&error)
+        return error == nil
+    }
+
     private var receiptURL: URL {
         let compiled = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path
         return URL(fileURLWithPath: UserDefaults.standard.string(forKey: "AuraScribeProjectRoot") ?? compiled)
@@ -635,13 +733,27 @@ private final class AudioOutputController {
         AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioDevicePropertyScopeOutput, mElement: element)
     }
     private func check(_ status: OSStatus) throws { if status != noErr { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) } }
-    func begin(mode: String, level: Double) throws {
+    func begin(pauseBrowser: Bool = false, speakersOnly: Bool = false, mode: String, level: Double) throws {
         try restore()
+        if pauseBrowser, let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+           ["com.apple.Safari", "com.google.Chrome", "com.microsoft.edgemac", "com.brave.Browser"].contains(id) {
+            if browserScript(id, "window.__auraPaused = Array.from(document.querySelectorAll('audio,video')).filter(e=>!e.paused);window.__auraPaused.forEach(e=>e.pause());") { pausedBrowser = id }
+        }
         guard mode != "unchanged" else { return }
         var query = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice,
             mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)
         var device: AudioDeviceID = 0; var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         try check(AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &query, 0, nil, &size, &device))
+        if speakersOnly {
+            var transport = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyTransportType, mScope: kAudioObjectPropertyScopeGlobal, mElement: 0)
+            var kind: UInt32 = 0; var count: UInt32 = 4
+            guard AudioObjectGetPropertyData(device, &transport, 0, nil, &count, &kind) == noErr,
+                  kind == kAudioDeviceTransportTypeBuiltIn else { return }
+            var source = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyDataSource, mScope: kAudioDevicePropertyScopeOutput, mElement: 0)
+            var value: UInt32 = 0
+            guard AudioObjectGetPropertyData(device, &source, 0, nil, &count, &value) == noErr,
+                  value == 0x6973706b else { return } // 'ispk': internal speakers; unknown routes stay unchanged.
+        }
         var changes = [[String: Any]]()
         let selector = mode == "mute" ? kAudioDevicePropertyMute : kAudioDevicePropertyVolumeScalar
         for element: UInt32 in [0, 1, 2] {
@@ -679,6 +791,10 @@ private final class AudioOutputController {
         } catch { try? restore(); throw error }
     }
     func restore() throws {
+        if let id = pausedBrowser {
+            _ = browserScript(id, "(window.__auraPaused||[]).forEach(e=>e.play().catch(()=>{}));window.__auraPaused=[];", allTabs: true)
+            pausedBrowser = nil
+        }
         guard FileManager.default.fileExists(atPath: receiptURL.path) else { return }
         let data = try Data(contentsOf: receiptURL)
         guard let saved = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -706,4 +822,86 @@ private final class AudioOutputController {
         }
         try FileManager.default.removeItem(at: receiptURL)
     }
+}
+
+/// Optional event tap for sided chords and shortcuts shared with the foreground app.
+private final class NativeShortcutMonitor {
+    private final class Binding {
+        let action: String, key: CGKeyCode, flags: CGEventFlags, sides: [CGKeyCode], modifierOnly: Bool, share: Bool, anyOption: Bool
+        var down = false, emitted = false, cancelled = false, consumedDown = false
+        var timer: DispatchWorkItem?
+        init?(_ data: [String: Any]) {
+            guard let action = data["action"] as? String, let code = data["keyCode"] as? Int else { return nil }
+            self.action = action; key = CGKeyCode(code)
+            modifierOnly = data["modifierOnly"] as? Bool ?? false; anyOption = data["anyOption"] as? Bool ?? false; share = data["share"] as? Bool ?? false
+            sides = (data["sides"] as? [Int] ?? []).map { CGKeyCode($0) }
+            var mask = CGEventFlags()
+            for name in data["modifiers"] as? [String] ?? [] {
+                switch name { case "alt": mask.insert(.maskAlternate); case "meta": mask.insert(.maskCommand); case "shift": mask.insert(.maskShift); case "control": mask.insert(.maskControl); case "fn": mask.insert(.maskSecondaryFn); default: break }
+            }
+            if modifierOnly { mask.formUnion(NativeShortcutMonitor.modifierMask(key)) }
+            flags = mask
+        }
+    }
+    private var tap: CFMachPort?, source: CFRunLoopSource?
+    private var bindings: [Binding] = []
+    private var emit: ((String, Bool) -> Void)?
+    private static func modifierMask(_ code: CGKeyCode) -> CGEventFlags {
+        switch code { case 58, 61: return .maskAlternate; case 59, 62: return .maskControl; case 54, 55: return .maskCommand; case 56, 60: return .maskShift; default: return .maskSecondaryFn }
+    }
+    func configure(_ rows: [[String: Any]], emit: @escaping (String, Bool) -> Void) throws {
+        stop(); self.emit = emit; bindings = rows.compactMap(Binding.init)
+        guard !bindings.isEmpty else { return }
+        let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << CGEventType.flagsChanged.rawValue)
+        tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap, eventsOfInterest: CGEventMask(mask), callback: { _, type, event, context in
+            guard let context = context else { return Unmanaged.passUnretained(event) }
+            let monitor = Unmanaged<NativeShortcutMonitor>.fromOpaque(context).takeUnretainedValue()
+            return monitor.handle(type, event) ? nil : Unmanaged.passUnretained(event)
+        }, userInfo: Unmanaged.passUnretained(self).toOpaque())
+        guard let tap = tap else { bindings = []; throw NSError(domain: "AuraShortcut", code: 1, userInfo: [NSLocalizedDescriptionKey: "Enable Accessibility permission to use sided or shared shortcuts."]) }
+        source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+    }
+    func stop() {
+        for binding in bindings { binding.timer?.cancel(); if binding.emitted { emit?(binding.action, false) } }
+        bindings = []
+        if let source = source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }; source = nil
+        if let tap = tap { CFMachPortInvalidate(tap) }; tap = nil
+    }
+    private func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput { if let tap = tap { CGEvent.tapEnable(tap: tap, enable: true) }; return false }
+        let code = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        let relevant: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift, .maskSecondaryFn]
+        var consume = false
+        for b in bindings {
+            if b.modifierOnly && type == .keyDown {
+                b.cancelled = true; b.timer?.cancel(); continue
+            }
+            let primary = b.modifierOnly ? (b.anyOption ? event.flags.contains(.maskAlternate) : CGEventSource.keyState(.combinedSessionState, key: b.key)) : code == b.key && type == .keyDown
+            let matches = primary && event.flags.intersection(relevant) == b.flags && b.sides.allSatisfy { CGEventSource.keyState(.combinedSessionState, key: $0) }
+            if !b.modifierOnly && code != b.key && !(b.down && event.flags.intersection(relevant) != b.flags) { continue }
+            if !b.modifierOnly && code == b.key && type == .keyUp && b.consumedDown { consume = true; b.consumedDown = false }
+            if matches && !b.down {
+                b.consumedDown = !b.share
+                b.down = true; b.cancelled = false
+                if b.modifierOnly {
+                    let timer = DispatchWorkItem { [weak self, weak b] in
+                        guard let b = b, b.down, !b.cancelled else { return }
+                        b.emitted = true; self?.emit?(b.action, true)
+                    }
+                    b.timer = timer; DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: timer)
+                } else { b.emitted = true; emit?(b.action, true) }
+            } else if !matches && b.down {
+                b.timer?.cancel()
+                if b.modifierOnly && !b.emitted && !b.cancelled { emit?(b.action, true); b.emitted = true }
+                if b.emitted { emit?(b.action, false) }
+                b.down = false; b.emitted = false
+            }
+            // Modifier transitions must reach macOS to avoid stuck modifier state.
+            if !b.modifierOnly && code == b.key && !b.share && matches { consume = true }
+        }
+        return consume
+    }
+    deinit { stop() }
 }

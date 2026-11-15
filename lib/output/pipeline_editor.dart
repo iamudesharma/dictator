@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'output_pipeline.dart';
+import '../transcription/gguf_catalog.dart';
 
 class PipelineEditor extends StatefulWidget {
   final OutputProfile? profile;
@@ -13,10 +15,14 @@ class _PipelineEditorState extends State<PipelineEditor> {
       TextEditingController(text: widget.profile?.application ?? '*');
   late final List<OutputStep> _steps = [...?widget.profile?.steps];
   late bool _includeDefault = widget.profile?.includeDefault ?? true;
+  late String _speechModel = widget.profile?.speechModel ?? '';
+  late final _language =
+      TextEditingController(text: widget.profile?.language ?? '');
   String? _error;
   @override
   void dispose() {
     _application.dispose();
+    _language.dispose();
     super.dispose();
   }
 
@@ -28,7 +34,7 @@ class _PipelineEditorState extends State<PipelineEditor> {
         context: context,
         builder: (context) => StatefulBuilder(
             builder: (context, update) => AlertDialog(
-                    title: const Text('Output step'),
+                    title: Text(tr("Output step")),
                     content: SizedBox(
                         width: 420,
                         child:
@@ -38,7 +44,7 @@ class _PipelineEditorState extends State<PipelineEditor> {
                               isExpanded: true,
                               items: OutputStepKind.values
                                   .map((k) => DropdownMenuItem(
-                                      value: k, child: Text(k.name)))
+                                      value: k, child: Text(tr(k.name))))
                                   .toList(),
                               onChanged: (v) {
                                 if (v != null) update(() => kind = v);
@@ -63,11 +69,11 @@ class _PipelineEditorState extends State<PipelineEditor> {
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel')),
+                          child: Text(tr("Cancel"))),
                       FilledButton(
                           onPressed: () => Navigator.pop(
                               context, OutputStep(kind, value.text.trim())),
-                          child: const Text('Add step'))
+                          child: Text(tr("Add step")))
                     ])));
     value.dispose();
     if (step != null && mounted) {
@@ -83,22 +89,52 @@ class _PipelineEditorState extends State<PipelineEditor> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-          title: const Text('Output pipeline'),
+          title: Text(tr("Output pipeline")),
           content: SizedBox(
               width: 580,
-              height: 430,
+              height: 560,
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextField(
                         controller: _application,
-                        decoration: const InputDecoration(
-                            labelText: 'Application bundle ID',
-                            helperText:
-                                'Use * for every app, e.g. com.apple.mail for Mail.')),
+                        decoration: InputDecoration(
+                            labelText: tr("Application bundle ID"),
+                            helperText: tr(
+                                "Use * for every app, e.g. com.apple.mail for Mail."))),
+                    DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: _speechModel,
+                        decoration: InputDecoration(
+                            labelText: tr("Speech model for this mode")),
+                        items: [
+                          DropdownMenuItem(
+                              value: '',
+                              child: Text(tr("Follow current model"))),
+                          for (final engine in [
+                            'whisper',
+                            'gemma',
+                            'moonshine',
+                            'nemotron',
+                            'apple'
+                          ])
+                            DropdownMenuItem(
+                                value: engine, child: Text(engine)),
+                          for (final model in ggufCatalog)
+                            DropdownMenuItem(
+                                value: 'gguf:${model.id}',
+                                child: Text(model.name))
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _speechModel = value ?? '')),
+                    TextField(
+                        controller: _language,
+                        decoration: InputDecoration(
+                            labelText: tr(
+                                "Language code (blank follows current, auto detects)"))),
                     SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Include the default pipeline'),
+                        title: Text(tr("Include the default pipeline")),
                         value: _includeDefault,
                         onChanged: (v) => setState(() => _includeDefault = v)),
                     Expanded(
@@ -111,14 +147,14 @@ class _PipelineEditorState extends State<PipelineEditor> {
                             itemBuilder: (context, index) => ListTile(
                                 key: ValueKey(_steps[index]),
                                 onTap: () => _step(index),
-                                title: Text(_steps[index].kind.name),
+                                title: Text(tr(_steps[index].kind.name)),
                                 subtitle: Text(_steps[index].value,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis),
                                 trailing: Padding(
                                     padding: const EdgeInsets.only(right: 28),
                                     child: IconButton(
-                                        tooltip: 'Remove step',
+                                        tooltip: tr("Remove step"),
                                         icon: const Icon(
                                             Icons.remove_circle_outline),
                                         onPressed: () => setState(
@@ -126,7 +162,7 @@ class _PipelineEditorState extends State<PipelineEditor> {
                     TextButton.icon(
                         onPressed: () => _step(),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add processing step')),
+                        label: Text(tr("Add processing step"))),
                     if (_error != null)
                       Text(_error!,
                           style: TextStyle(
@@ -135,19 +171,23 @@ class _PipelineEditorState extends State<PipelineEditor> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel')),
+                child: Text(tr("Cancel"))),
             FilledButton(
                 onPressed: () {
                   try {
                     final profile = OutputProfile(
                         _application.text.trim(), _steps,
-                        includeDefault: _includeDefault);
+                        includeDefault: _includeDefault,
+                        speechModel: _speechModel.isEmpty ? null : _speechModel,
+                        language: _language.text.trim().isEmpty
+                            ? null
+                            : _language.text.trim());
                     PipelineStore.validate([profile]);
                     Navigator.pop(context, profile);
                   } catch (e) {
                     setState(() => _error = e.toString());
                   }
                 },
-                child: const Text('Save pipeline'))
+                child: Text(tr("Save pipeline")))
           ]);
 }

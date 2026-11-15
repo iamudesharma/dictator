@@ -21,6 +21,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		AAB200000000000000000001 /* AppleSpeechPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB200000000000000000002; };
+		AAB100000000000000000001 /* ReplayPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB100000000000000000002; };
 		BBCE10012044A3C60003C045 /* DictationIndicatorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */; };
 		BBCE20012044A3C60003C045 /* TextInsertionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBCE20002044A3C60003C045 /* TextInsertionPolicy.swift */; };
 		03EFC3C7552EA87BEDA99DD3 /* CapturePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23556901E9F85040369852F8 /* CapturePlugin.swift */; };
@@ -69,6 +71,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AAB200000000000000000002 /* AppleSpeechPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSpeechPlugin.swift; sourceTree = "<group>"; };
+		AAB100000000000000000002 /* ReplayPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayPlugin.swift; sourceTree = "<group>"; };
 		BBCE10002044A3C60003C045 /* DictationIndicatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationIndicatorPanel.swift; sourceTree = "<group>"; };
 		BBCE20002044A3C60003C045 /* TextInsertionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInsertionPolicy.swift; sourceTree = "<group>"; };
 		20BDA7F3D8B2C821912FE378 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
@@ -215,6 +219,8 @@
 				33CC11242044D66E0003C045 /* Resources */,
 				33BA886A226E78AF003329D5 /* Configs */,
 				23556901E9F85040369852F8 /* CapturePlugin.swift */,
+				AAB100000000000000000002 /* ReplayPlugin.swift */,
+				AAB200000000000000000002 /* AppleSpeechPlugin.swift */,
 				9483C19F976491303B310633 /* VoiceFilterPlugin.swift */,
 				7C58A950045718169EE60FF3 /* UpdatePlugin.swift */,
 			);
@@ -494,6 +500,8 @@
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 				03EFC3C7552EA87BEDA99DD3 /* CapturePlugin.swift in Sources */,
+				AAB100000000000000000001 /* ReplayPlugin.swift in Sources */,
+				AAB200000000000000000001 /* AppleSpeechPlugin.swift in Sources */,
 				950CB611F4AACFBA5C164E27 /* VoiceFilterPlugin.swift in Sources */,
 				96F8899CFC4BFEA6CD7AEAD6 /* UpdatePlugin.swift in Sources */,
 			);

@@ -1,10 +1,14 @@
+import '../l10n/app_localizations.dart';
+import '../audio/pause_compactor.dart';
+import '../control/control_service.dart';
 import '../memory/detached_text_input.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import '../history/history_service.dart';
 import '../output/output_pipeline.dart';
+import '../output/spoken_text.dart';
 import '../meetings/meeting_service.dart';
 import '../capture/annotation_service.dart';
 import '../updates/update_service.dart';
@@ -160,13 +164,64 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
   }
 
   UpdateService? _updates;
+  ControlService? _control;
+  ControlService get control =>
+      _control ??= ControlService(this, _transcription, _settings);
   UpdateService get updates => _updates ??= UpdateService(_settings, this);
   int settingsPage = 0;
+  String? requestedStory;
+  int storyRequest = 0;
+  Future<void> openStory(String id) async {
+    requestedStory = id;
+    storyRequest++;
+    settingsPage = 11;
+    await showSettings();
+    notifyListeners();
+  }
+
   AnnotationService? _annotations;
   AnnotationService get annotations => _annotations ??= AnnotationService(this);
   Future<void> Function(String)? _transcriptDestination;
   Future<String> previewOutput(String text, List<OutputStep> steps) =>
       OutputProcessor(_grammar.transform).process(text, steps);
+  Future<String> processGlobalOutput(String text) async {
+    text = await _grammar.clean(text);
+    text = _settings.applyReplacements(text);
+    text = await previewOutput(
+        text, PipelineStore.resolve(await PipelineStore().read(), '*'));
+    return SpokenText.apply(text,
+        language: _settings.language,
+        symbols: _settings.option('spokenSymbols'),
+        formatting: _settings.option('spokenFormatting'),
+        fillers: _settings.option('fillers'),
+        spacing: _settings.option('smartSpacing'));
+  }
+
+  Future<void> processTypedText() async {
+    if (!isAvailable || paused) return;
+    externalActivity = 'Processing typed text';
+    try {
+      final target = await _accessibility.captureDictationTarget();
+      final text = await const MethodChannel('com.aurascribe/accessibility')
+          .invokeMethod<String>('selectFocusedText');
+      if (text == null || text.trim().isEmpty) {
+        throw StateError('The focused field does not expose editable text.');
+      }
+      final output = await previewOutput(
+          _settings.applyReplacements(text),
+          PipelineStore.resolve(
+              await PipelineStore().read(), target['bundleId'] ?? ''));
+      _accessibility.restoreClipboard = _settings.restoreClipboard;
+      await _accessibility.insertText(output);
+      await _remember(output);
+    } catch (e) {
+      _setError('Could not process typed text: $e');
+    } finally {
+      await _accessibility.releaseDictationTarget();
+      externalActivity = null;
+    }
+  }
+
   Future<void> dictateTo(Future<void> Function(String) destination) async {
     if (_state == DictationState.recording && _transcriptDestination != null) {
       await toggle(raw: true);
@@ -196,8 +251,8 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
   String get effectiveMicrophoneId =>
       _audio.microphoneOverride ?? _settings.microphoneId;
   MeetingService? _meetings;
-  MeetingService get meetings =>
-      _meetings ??= MeetingService(this, _transcription, _grammar);
+  MeetingService get meetings => _meetings ??=
+      MeetingService(this, _transcription, _grammar, settings: _settings);
   String? _externalActivity;
   String? get externalActivity => _externalActivity;
   set externalActivity(String? value) {
@@ -213,7 +268,11 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       (_state == DictationState.idle || _state == DictationState.error);
   bool _rawSession = false;
   List<OutputStep> _outputSteps = [];
-  DictationMode get dictationMode => (_rawSession || _outputSteps.isNotEmpty)
+  DictationMode get dictationMode => (_rawSession ||
+          _settings.copyOnly ||
+          _outputSteps.isNotEmpty ||
+          ['spokenSymbols', 'spokenFormatting', 'fillers', 'smartSpacing']
+              .any((key) => _settings.option(key)))
       ? DictationMode.enhancedAccuracy
       : _settings.dictationMode;
   DictationState get state => _state;
@@ -227,22 +286,15 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
   String get liveTranscript => _liveTranscript;
 
   DictationOrchestrator({
-    required AudioService audio,
-    required VadService vad,
-    required TranscriptionService transcription,
-    required GrammarService grammar,
-    required AccessibilityService accessibility,
-    required TrayService tray,
-    required SmartCommandService smartCommand,
-    required SettingsService settings,
-  })  : _audio = audio,
-        _vad = vad,
-        _transcription = transcription,
-        _grammar = grammar,
-        _accessibility = accessibility,
-        _tray = tray,
-        _smartCommand = smartCommand,
-        _settings = settings {
+    required this._audio,
+    required this._vad,
+    required this._transcription,
+    required this._grammar,
+    required this._accessibility,
+    required this._tray,
+    required this._smartCommand,
+    required this._settings,
+  }) {
     windowManager.addListener(this);
     _vad.onLevel = (value) {
       if (_state != DictationState.recording) return;
@@ -288,7 +340,11 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       _setState(DictationState.inserting);
       await _showDictationIndicator();
       await Future<void>.delayed(const Duration(milliseconds: 400));
-      _accessibility.terminalPaste = _settings.terminalPaste;
+      _accessibility.returnToApp =
+          _settings.option('returnToApp', fallback: true);
+      _accessibility.smartSpacing = _settings.option('smartSpacing');
+      _accessibility.terminalPaste =
+          _terminalSession || _settings.terminalPaste;
       _accessibility.restoreClipboard = _settings.restoreClipboard;
       await _accessibility.insertText(text);
       _setState(DictationState.idle);
@@ -301,12 +357,56 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
     }
   }
 
+  void refreshPreferences() {
+    unawaited(_tray.refresh());
+    notifyListeners();
+  }
+
+  Future<void> cancelDictation() async {
+    if (_preparing) {
+      cancelPreparation();
+      return;
+    }
+    if (_state != DictationState.recording) return;
+    _setState(DictationState.transcribing);
+    _vad.stop();
+    _streamingTimer?.cancel();
+    try {
+      await _audioSubscription?.cancel();
+      await _partialFinished?.future;
+      await _audio.cancel();
+      if (_transcription.supportsTrueStreaming) {
+        await _transcription.endStream();
+      }
+    } finally {
+      try {
+        await _pcmSpool?.dispose();
+      } finally {
+        _pcmSpool = null;
+        try {
+          await _audioOutput.end();
+        } finally {
+          try {
+            await _restoreSessionSpeech();
+          } finally {
+            await _accessibility.releaseDictationTarget();
+            _setState(DictationState.idle);
+          }
+        }
+      }
+    }
+  }
+
   Future<void> pasteLast() async {
     if (_lastTranscript == null || !isAvailable) return;
     _setState(DictationState.inserting);
     try {
       await _accessibility.captureDictationTarget();
-      _accessibility.terminalPaste = _settings.terminalPaste;
+      _accessibility.returnToApp =
+          _settings.option('returnToApp', fallback: true);
+      _accessibility.smartSpacing = _settings.option('smartSpacing');
+      _accessibility.terminalPaste =
+          _terminalSession || _settings.terminalPaste;
       _accessibility.restoreClipboard = _settings.restoreClipboard;
       await _accessibility.insertText(_lastTranscript!);
       _setState(DictationState.idle);
@@ -317,23 +417,75 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
     }
   }
 
+  String? _historyAudio;
+  (int, String, String)? _sessionSpeech;
+  Future<void> _restoreSessionSpeech() async {
+    final previous = _sessionSpeech;
+    if (previous == null) return;
+    _sessionSpeech = null;
+    await _transcription.unloadModel();
+    await _settings.setSttEngineIndex(previous.$1);
+    await _settings.setGgufModel(previous.$2);
+    await _settings.setLanguage(previous.$3);
+  }
+
+  Future<void> transcribeHistory(DictationEntry entry, String language) async {
+    if (!isAvailable) throw StateError('Finish the current audio task first.');
+    externalActivity = 'Transcribing history';
+    final previous = _settings.language;
+    try {
+      final file = await HistoryService.instance.audioFile(entry);
+      if (file == null) throw StateError('This entry has no retained audio.');
+      await _settings.setLanguage(language);
+      final error = await _transcription.ensureLoaded();
+      if (error != null) throw StateError(error);
+      final text = await _transcription.transcribe(file.path);
+      await HistoryService.instance.replace(entry, text,
+          model: _transcription.modelLabel, language: language);
+    } finally {
+      await _settings.setLanguage(previous);
+      externalActivity = null;
+    }
+  }
+
   Future<void> _remember(String text) async {
     _lastTranscript = text;
     if (_settings.historyEnabled) {
       try {
-        await HistoryService.instance.add(text, _transcription.modelLabel);
+        HistoryService.instance.retentionDays = _settings.historyRetentionDays;
+        await HistoryService.instance.add(text, _transcription.modelLabel,
+            language: _settings.language, audio: _historyAudio);
+        _historyAudio = null;
       } catch (e) {
         debugPrint('[AuraScribe] History save failed: $e');
       }
     }
   }
 
-  Future<void> toggle({bool raw = false}) async {
+  bool paused = false;
+  Future<void> setPaused(bool value) async {
+    if (value) await cancelDictation();
+    paused = value;
+    _tray.paused = value;
+    await _tray.updateState(_state);
+    notifyListeners();
+  }
+
+  Future<String?>? _batchPreparation;
+  bool _terminalSession = false;
+  Future<void> toggle({bool raw = false, bool terminal = false}) async {
+    if (paused) return;
     if (_starting || _externalActivity != null) return;
+    if (_state != DictationState.recording) _terminalSession = terminal;
     _starting = true;
+    final startup = Stopwatch()..start();
     notifyListeners();
     try {
       await _toggle(raw: raw);
+      if (_state == DictationState.recording) {
+        debugPrint(
+            '[AuraScribe] Hotkey to recording ready: ${startup.elapsedMilliseconds} ms');
+      }
     } catch (e) {
       _vad.stop();
       _streamingTimer?.cancel();
@@ -344,6 +496,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       _setError('Dictation could not start: $e');
     } finally {
       _preparing = false;
+      if (_state != DictationState.recording) await _restoreSessionSpeech();
       _starting = false;
       notifyListeners();
     }
@@ -356,6 +509,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       await _stopAndProcess();
     } else if (_state == DictationState.idle ||
         _state == DictationState.error) {
+      _historyAudio = null;
       _rawSession = raw;
       _cancelStarting = false;
       _audioLevel = 0;
@@ -366,15 +520,29 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       _preparing = true;
       notifyListeners();
       await _showDictationIndicator();
-      _outputSteps = raw
-          ? []
-          : PipelineStore.resolve(
-              await PipelineStore().read(), target['bundleId'] ?? '');
-      _accessibility.terminalPaste = _settings.terminalPaste;
+      final profiles = await PipelineStore().read();
+      _outputSteps =
+          raw ? [] : PipelineStore.resolve(profiles, target['bundleId'] ?? '');
+      _accessibility.returnToApp =
+          _settings.option('returnToApp', fallback: true);
+      _accessibility.smartSpacing = _settings.option('smartSpacing');
+      _accessibility.terminalPaste =
+          _terminalSession || _settings.terminalPaste;
       _accessibility.restoreClipboard = _settings.restoreClipboard;
       final keyboard = await const MethodChannel('com.aurascribe/accessibility')
           .invokeMethod<String>('currentKeyboardSource');
-      final mapped = _settings.keyboardModels[keyboard];
+      final profile = profiles
+              .where((p) => p.application == target['bundleId'])
+              .firstOrNull ??
+          profiles.where((p) => p.application == '*').firstOrNull;
+      final mapped = profile?.speechModel ?? _settings.keyboardModels[keyboard];
+      if (profile?.speechModel != null || profile?.language != null) {
+        _sessionSpeech =
+            (_settings.sttEngineIndex, _settings.ggufModel, _settings.language);
+      }
+      if (profile?.language != null) {
+        await _settings.setLanguage(profile!.language!);
+      }
       if (mapped != null) {
         _grammar.attachSttModel(null);
         if (mapped.startsWith('gguf:')) {
@@ -386,10 +554,12 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
           await _transcription.switchEngine(SttEngine.values.byName(mapped));
         }
       }
-      // Lazily load the STT model on first use so the app starts instantly
-      // and stays at minimal idle RAM. Attach shared Gemma model to grammar
-      // once STT is ready (saves a 270 MB download on Gemma path).
-      if (!_transcription.isLoaded) {
+      // Streaming engines need their decoder before PCM arrives. GGUF uses
+      // a complete WAV: prepare after capture starts, behind the same model
+      // lease, and join preparation before final transcription.
+      final batch = _transcription.activeEngine == SttEngine.gguf;
+      _batchPreparation = null;
+      if (!batch && !_transcription.isLoaded) {
         final error = await _transcription.ensureLoaded();
         if (error != null) {
           _setError(error);
@@ -404,6 +574,12 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       }
       debugPrint('[AuraScribe] → starting recording');
       await _startRecording();
+      if (batch &&
+          _state == DictationState.recording &&
+          !_transcription.isLoaded) {
+        _batchPreparation = _transcription.ensureLoaded().then((error) => error,
+            onError: (Object error) => error.toString());
+      }
     } else {
       debugPrint('[AuraScribe] ⏭️ Ignoring toggle while busy ($_state)');
     }
@@ -419,9 +595,16 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
 
   Map<String, Object> get _indicatorData => {
         'top': _settings.indicatorAtTop,
+        'notch': _settings.notchIndicator,
         'phase': _preparing ? 'preparing' : _state.name,
+        'accessibilityLabel': _preparing
+            ? tr('Preparing')
+            : _state == DictationState.recording
+                ? '${tr('Listening')} · ${tr(recordingHint)}'
+                : _state.label,
         'level': _audioLevel,
         'error': _errorMessage ?? '',
+        'text': _settings.option('liveText') ? _liveTranscript : '',
       };
   Future<void> _showDictationIndicator() => _queueWindow(() async {
         if (!_settings.showIndicator || _cancelStarting) return;
@@ -439,7 +622,9 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
   }
 
   Future<void> _startRecording() async {
-    await _audioOutput.begin(_settings.recordingAudio, _settings.duckLevel);
+    await _audioOutput.begin(_settings.recordingAudio, _settings.duckLevel,
+        speakersOnly: _settings.speakersOnly,
+        pauseBrowser: _settings.option('pauseBrowser'));
     final axGranted = await _accessibility.hasPermission();
     debugPrint(
         '[AuraScribe] Accessibility permission at record start: $axGranted');
@@ -586,6 +771,9 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
     } finally {
       await _pcmSpool?.dispose();
       _pcmSpool = null;
+      await HistoryService.instance.discardAudio(_historyAudio);
+      _historyAudio = null;
+      await _restoreSessionSpeech();
     }
   }
 
@@ -629,7 +817,8 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
         return;
       }
 
-      if (!_transcription.supportsTrueStreaming) {
+      if (!_transcription.supportsTrueStreaming ||
+          (_settings.historyEnabled && _settings.keepHistoryAudio)) {
         final directory = await ProjectStorage.instance.directory('tmp/pcm');
         final finalWavFile = await _pcmSpool!.snapshot(File(
             '${directory.path}/final-${DateTime.now().microsecondsSinceEpoch}.wav'));
@@ -655,10 +844,24 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
     );
     String transcript;
     try {
+      final preparationError = await _batchPreparation;
+      _batchPreparation = null;
+      if (preparationError != null) throw StateError(preparationError);
       if (_transcription.supportsTrueStreaming) {
         transcript = await _transcription.endStream();
       } else {
-        transcript = await _transcription.transcribe(wavPath!);
+        if (_settings.option('skipPauses')) {
+          final compacted = File(
+              '${(await ProjectStorage.instance.directory('tmp')).path}/dictation-compact.wav');
+          try {
+            await compactPauses(wavPath!, compacted);
+            transcript = await _transcription.transcribe(compacted.path);
+          } finally {
+            if (await compacted.exists()) await compacted.delete();
+          }
+        } else {
+          transcript = await _transcription.transcribe(wavPath!);
+        }
       }
     } catch (e, st) {
       debugPrint('[AuraScribe] ❌ Transcription exception: $e\n$st');
@@ -666,14 +869,22 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
       return;
     } finally {
       if (wavPath != null) {
+        if (_settings.historyEnabled &&
+            _settings.keepHistoryAudio &&
+            _transcriptDestination == null) {
+          try {
+            _historyAudio = await HistoryService.instance.retainAudio(wavPath);
+          } catch (e) {
+            debugPrint('History recording could not be retained: $e');
+          }
+        }
         final wav = File(wavPath);
         if (await wav.exists()) await wav.delete();
       }
     }
 
     debugPrint(
-      '[AuraScribe] Transcript received (${transcript.length} chars): '
-      '"${transcript.length > 120 ? '${transcript.substring(0, 120)}…' : transcript}"',
+      '[AuraScribe] Transcript received (${transcript.length} chars)',
     );
 
     if (_transcriptDestination != null) {
@@ -721,8 +932,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
     try {
       cleaned = _rawSession ? transcript : await _grammar.clean(transcript);
       debugPrint(
-        '[AuraScribe] Grammar done (${cleaned.length} chars): '
-        '"${cleaned.length > 120 ? '${cleaned.substring(0, 120)}…' : cleaned}"',
+        '[AuraScribe] Grammar done (${cleaned.length} chars)',
       );
     } catch (e, st) {
       debugPrint(
@@ -739,8 +949,20 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
         return;
       }
     }
+    if (!_rawSession) {
+      cleaned = SpokenText.apply(cleaned,
+          language: _settings.language,
+          symbols: _settings.option('spokenSymbols'),
+          formatting: _settings.option('spokenFormatting'),
+          fillers: _settings.option('fillers'),
+          spacing: _settings.option('smartSpacing'));
+    }
     await _remember(cleaned);
-
+    if (_settings.copyOnly) {
+      await Clipboard.setData(ClipboardData(text: cleaned));
+      _setState(DictationState.idle);
+      return;
+    }
     _setState(DictationState.inserting);
     debugPrint(
         '[AuraScribe] Inserting ${cleaned.length} chars into focused app…');
@@ -792,7 +1014,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
 
     _selectedTextToProcess = text;
     _smartCommandError = null;
-    debugPrint('[AuraScribe] Grabbed selected text: "$_selectedTextToProcess"');
+    debugPrint('[AuraScribe] Selected text captured');
 
     // 2. Change view
     _currentView = AppView.smartCommands;
@@ -839,7 +1061,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
 
     final text = _selectedTextToProcess!;
     debugPrint(
-        '[AuraScribe][Orchestrator] Executing Smart Command $type on target text length: ${text.length} chars. Text content: "$text"');
+        '[AuraScribe][Orchestrator] Executing Smart Command $type on target text length: ${text.length} chars.');
 
     String result;
     try {
@@ -850,7 +1072,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
         customPrompt: customPrompt,
       );
       debugPrint(
-          '[AuraScribe][Orchestrator] _smartCommand.execute completed. Result length: ${result.length} chars. Result content: "$result"');
+          '[AuraScribe][Orchestrator] _smartCommand.execute completed. Result length: ${result.length} chars.');
     } catch (e, stack) {
       debugPrint(
           '[AuraScribe][Orchestrator] Smart Command execution crashed: $e\n$stack');
@@ -976,6 +1198,7 @@ class DictationOrchestrator extends ChangeNotifier with WindowListener {
     _meetings?.dispose();
     _voiceFilter?.dispose();
     _updates?.dispose();
+    unawaited(_control?.close());
     _streamingTimer?.cancel();
     _audioSubscription?.cancel();
     _audio.dispose();

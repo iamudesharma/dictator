@@ -12,6 +12,7 @@ enum SttEngine {
   /// Quantized English Moonshine Tiny, clip-based CPU recognition.
   moonshine,
   gguf,
+  apple,
 }
 
 extension SttEngineX on SttEngine {
@@ -23,6 +24,8 @@ extension SttEngineX on SttEngine {
         return SttEngine.nemotron;
       case 3:
         return SttEngine.moonshine;
+      case 5:
+        return SttEngine.apple;
       case 4:
         return SttEngine.gguf;
       default:
@@ -42,6 +45,8 @@ extension SttEngineX on SttEngine {
         return 3;
       case SttEngine.gguf:
         return 4;
+      case SttEngine.apple:
+        return 5;
     }
   }
 }

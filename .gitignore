@@ -53,3 +53,7 @@ assets/gemma-4-E2B-it.litertlm
 /.aurascribe/
 /.reference/
 /.widget_preview/
+
+# Temporary settings/widget-test storage
+/.pages-test-*/
+/.memory-ui-test-*/
