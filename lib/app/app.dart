@@ -1,4 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../l10n/app_localizations.dart';
+
+import 'package:flutter/services.dart';
+
 import '../app/dictation_orchestrator.dart';
 import '../shared/app_theme.dart';
 import '../shared/smart_command_hud.dart';
@@ -30,14 +35,27 @@ class AuraScribeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
-        valueListenable: orchestrator.settingsTreeVisible,
-        builder: (context, visible, _) => visible
-            ? MaterialApp(
+      valueListenable: orchestrator.settingsTreeVisible,
+      builder: (context, visible, _) => visible
+          ? ListenableBuilder(
+              listenable: Listenable.merge([
+                orchestrator,
+                AppLocalizations.instance,
+              ]),
+              builder: (context, _) => MaterialApp(
                 title: 'AuraScribe',
+                builder: auraCupertinoTheme,
+                locale: AppLocalizations.instance.locale,
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: GlobalMaterialLocalizations.delegates,
                 debugShowCheckedModeBanner: false,
                 theme: auraTheme(Brightness.light),
                 darkTheme: auraTheme(Brightness.dark),
-                themeMode: ThemeMode.system,
+                themeMode: switch (settings.appearance) {
+                  'light' => ThemeMode.light,
+                  'dark' => ThemeMode.dark,
+                  _ => ThemeMode.system,
+                },
                 home: AuraScribeHome(
                   orchestrator: orchestrator,
                   settings: settings,
@@ -46,8 +64,10 @@ class AuraScribeApp extends StatelessWidget {
                   transcriptionService: transcriptionService,
                   grammarService: grammarService,
                 ),
-              )
-            : const SizedBox.shrink());
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
   }
 }
 
@@ -71,29 +91,43 @@ class AuraScribeHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListenableBuilder(
-        listenable: orchestrator,
-        builder: (context, _) {
-          return Stack(
-            children: [
-              if (!orchestrator.settingsTreeVisible.value)
-                const SizedBox.shrink()
-              else if (orchestrator.currentView == AppView.smartCommands)
-                SmartCommandHUD(orchestrator: orchestrator)
-              else
-                SettingsScreen(
-                  orchestrator: orchestrator,
-                  settings: settings,
-                  hotkeyService: hotkeyService,
-                  accessibility: accessibility,
-                  transcriptionService: transcriptionService,
-                  grammarService: grammarService,
-                ),
-            ],
-          );
-        },
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(
+          LogicalKeyboardKey.keyD,
+          meta: true,
+          shift: true,
+        ): () => orchestrator.openStory(
+          orchestrator.settingsDrafts['story'] ?? 'hud-ready',
+        ),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: ListenableBuilder(
+            listenable: orchestrator,
+            builder: (context, _) {
+              return Stack(
+                children: [
+                  if (!orchestrator.settingsTreeVisible.value)
+                    const SizedBox.shrink()
+                  else if (orchestrator.currentView == AppView.smartCommands)
+                    SmartCommandHUD(orchestrator: orchestrator)
+                  else
+                    SettingsScreen(
+                      orchestrator: orchestrator,
+                      settings: settings,
+                      hotkeyService: hotkeyService,
+                      accessibility: accessibility,
+                      transcriptionService: transcriptionService,
+                      grammarService: grammarService,
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

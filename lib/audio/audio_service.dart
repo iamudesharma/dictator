@@ -1,7 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import 'dart:async';
+
+import '../storage/project_storage.dart';
+import 'pcm_spool.dart';
+
 import 'package:record/record.dart';
+
 import '../settings/settings_service.dart';
 
 class AudioService {
@@ -12,13 +17,20 @@ class AudioService {
     final selected = microphoneOverride ?? settings.microphoneId;
     if (selected.isEmpty) return null;
     final devices = await _recorder.listInputDevices();
-    return devices.firstWhere((d) => d.id == selected,
-        orElse: () => throw StateError(
-            'Selected microphone is disconnected. Choose another microphone in Settings.'));
+    return devices.firstWhere(
+      (d) => d.id == selected,
+      orElse: () => throw StateError(
+        'Selected microphone is disconnected. Choose another microphone in Settings.',
+      ),
+    );
   }
 
   final AudioRecorder _recorder = AudioRecorder();
   String? _currentPath;
+  PcmSpool? _fileSpool;
+  StreamSubscription<Uint8List>? _fileSubscription;
+  Object? _fileError;
+  StackTrace? _fileErrorStack;
 
   /// Returns the current amplitude in dBFS. Used by VAD.
   Future<Amplitude> getAmplitude() => _recorder.getAmplitude();
@@ -26,23 +38,38 @@ class AudioService {
   bool get isRecording => _currentPath != null;
 
   Future<void> start() async {
-    final dir = await getTemporaryDirectory();
-    final fileName = 'dictation_${DateTime.now().millisecondsSinceEpoch}';
-    _currentPath = p.join(dir.path, fileName);
-
-    debugPrint(
-        '[AuraScribe][Audio] start → $_currentPath (16kHz mono, WAV encoder)');
-    await _recorder.start(
-      RecordConfig(
-        device: await _device(),
-        encoder: AudioEncoder.wav,
-        sampleRate: 16000,
-        numChannels: 1,
-        bitRate: 256000,
-      ),
-      path: _currentPath!,
+    if (isRecording) throw StateError('Microphone is already recording');
+    final spool = await PcmSpool.create(
+      await ProjectStorage.instance.directory('tmp/pcm'),
+      settings.maxRecordingSeconds,
     );
-    debugPrint('[AuraScribe][Audio] recording started');
+    _fileSpool = spool;
+    _fileError = null;
+    _fileErrorStack = null;
+    try {
+      // Use the same converted PCM stream as the streaming backends. Writing
+      // our own WAV avoids platform-dependent file codecs and header layouts.
+      final stream = await startStream();
+      _currentPath = spool.file.path;
+      _fileSubscription = stream.listen(
+        (chunk) {
+          if (_fileError != null) return;
+          try {
+            spool.append(chunk);
+          } catch (error, stack) {
+            _fileError = error;
+            _fileErrorStack = stack;
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          _fileError = error;
+          _fileErrorStack = stack;
+        },
+      );
+    } catch (_) {
+      await cancel();
+      rethrow;
+    }
   }
 
   /// Starts streaming raw PCM audio chunks.
@@ -62,22 +89,61 @@ class AudioService {
   /// Stops recording and returns the path to the WAV file.
   /// Returns null if not recording.
   Future<String?> stop() async {
-    if (!await _recorder.isRecording()) {
-      debugPrint('[AuraScribe][Audio] stop → not recording, returning null');
-      return null;
+    final spool = _fileSpool;
+    if (spool == null) {
+      try {
+        return await _recorder.stop();
+      } finally {
+        _currentPath = null;
+      }
     }
-    final path = await _recorder.stop();
+    try {
+      // AudioRecorder.stop closes its output stream after queued chunks drain.
+      // Keep our listener attached until then, including the final audio chunk.
+      await _recorder.stop();
+      if (_fileError != null) {
+        Error.throwWithStackTrace(_fileError!, _fileErrorStack!);
+      }
+      return (await spool.finish()).path;
+    } finally {
+      await _releaseFileCapture();
+    }
+  }
+
+  Future<void> _releaseFileCapture() async {
+    final subscription = _fileSubscription;
+    final spool = _fileSpool;
+    _fileSubscription = null;
+    _fileSpool = null;
     _currentPath = null;
-    debugPrint('[AuraScribe][Audio] stop → saved: $path');
-    return path;
+    try {
+      await subscription?.cancel();
+    } finally {
+      await spool?.dispose();
+    }
   }
 
   Future<void> cancel() async {
-    await _recorder.cancel();
-    _currentPath = null;
+    try {
+      await _recorder.cancel();
+    } finally {
+      await _releaseFileCapture();
+    }
   }
 
   void dispose() {
-    _recorder.dispose();
+    unawaited(
+      _dispose().catchError((Object error) {
+        debugPrint('[AuraScribe][Audio] dispose: $error');
+      }),
+    );
+  }
+
+  Future<void> _dispose() async {
+    try {
+      await _recorder.dispose();
+    } finally {
+      await _releaseFileCapture();
+    }
   }
 }

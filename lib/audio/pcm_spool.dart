@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import '../shared/wav_header_helper.dart';
 
 /// Appends bounded PCM directly to disk. A partial decoder sees an immutable
@@ -15,7 +16,8 @@ class PcmSpool {
   static Future<PcmSpool> create(Directory directory, int maxSeconds) async {
     await directory.create(recursive: true);
     final file = File(
-        '${directory.path}/dictation-${DateTime.now().microsecondsSinceEpoch}.wav');
+      '${directory.path}/dictation-${DateTime.now().microsecondsSinceEpoch}.wav',
+    );
     final writer = await file.open(mode: FileMode.write);
     try {
       await writer.writeFrom(WavHeaderHelper.buildHeader(0));
@@ -70,6 +72,28 @@ class PcmSpool {
       await output?.close();
       if (!complete && await target.exists()) await target.delete();
     }
+  }
+
+  /// Finalizes in place and transfers file ownership to the caller. Capture
+  /// must be stopped first. No full-clip allocation or second disk copy.
+  Future<File> finish() async {
+    if (_closed) throw StateError('PCM spool is closed');
+    _closed = true;
+    var complete = false;
+    try {
+      final length = bytes & ~1;
+      await _writer.truncate(44 + length);
+      await _writer.setPosition(0);
+      await _writer.writeFrom(WavHeaderHelper.buildHeader(length));
+      complete = true;
+    } finally {
+      try {
+        await _writer.close();
+      } finally {
+        if (!complete && await file.exists()) await file.delete();
+      }
+    }
+    return file;
   }
 
   Future<void> dispose() async {

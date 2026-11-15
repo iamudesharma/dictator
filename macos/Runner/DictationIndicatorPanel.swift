@@ -45,12 +45,14 @@ final class DictationIndicatorController {
         view.phase = data["phase"] as? String ?? "preparing"
         view.level = min(1, max(0, data["level"] as? Double ?? 0))
         view.message = data["error"] as? String ?? ""
-        view.setAccessibilityLabel(view.phase == "recording" ? "AuraScribe listening. Release shortcut to finish."
-            : view.phase == "error" ? view.message : "AuraScribe \(view.phase)")
-        let size = view.phase == "error" ? NSSize(width: 328, height: 64) : NSSize(width: 104, height: 30)
+        view.setAccessibilityLabel(view.phase == "error" ? view.message : data["accessibilityLabel"] as? String ?? "AuraScribe")
+        view.liveText = data["text"] as? String ?? ""
+        let size = view.phase == "error" ? NSSize(width: 328, height: 64) : NSSize(width: view.liveText.isEmpty ? 104 : 420, height: view.liveText.isEmpty ? 30 : 66)
         let visible = screen.visibleFrame
+        let notch = data["notch"] as? Bool ?? false
+        let hasNotch = screen.safeAreaInsets.top > 0
         window.setFrame(NSRect(x: visible.midX - size.width / 2,
-            y: top ? visible.maxY - size.height - 10 : visible.minY + 12,
+            y: notch && hasNotch ? screen.frame.maxY - screen.safeAreaInsets.top - size.height : (top ? visible.maxY - size.height - 10 : visible.minY + 12),
             width: size.width, height: size.height), display: true)
         view.needsDisplay = true
     }
@@ -63,6 +65,7 @@ final class DictationMeterView: NSView {
     var phase = "preparing"
     var level: Double = 0
     var message = ""
+    var liveText = ""
     private var displayedLevel: Double = 0
     private var tick = 0.0
     private var timer: Timer?
@@ -89,6 +92,11 @@ final class DictationMeterView: NSView {
         NSColor(calibratedRed: 0.075, green: 0.09, blue: 0.105, alpha: 0.97).setFill(); shape.fill()
         NSColor.white.withAlphaComponent(0.2).setStroke(); shape.lineWidth = 1; shape.stroke()
         let teal = NSColor(calibratedRed: 0.57, green: 0.87, blue: 0.85, alpha: 1)
+        if !liveText.isEmpty && phase != "error" {
+            (liveText as NSString).draw(with: NSRect(x: 14, y: 34, width: bounds.width - 28, height: 25),
+                options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+                attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.white])
+        }
         let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if phase == "error" {
             let text = message as NSString

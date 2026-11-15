@@ -1,20 +1,25 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:crypto/crypto.dart';
 import '../storage/project_storage.dart';
 
 class CustomSpeechModel {
   final String id, name, architecture, filename;
-  const CustomSpeechModel(this.id, this.name, this.architecture, this.filename);
+  final String? projectPath;
+  const CustomSpeechModel(this.id, this.name, this.architecture, this.filename,
+      {this.projectPath});
   Map<String, String> toJson() => {
         'id': id,
         'name': name,
         'architecture': architecture,
-        'filename': filename
+        'filename': filename,
+        if (projectPath != null) 'projectPath': projectPath!
       };
   factory CustomSpeechModel.fromJson(Map<String, dynamic> data) =>
       CustomSpeechModel(data['id'] as String, data['name'] as String,
-          data['architecture'] as String, data['filename'] as String);
+          data['architecture'] as String, data['filename'] as String,
+          projectPath: data['projectPath'] as String?);
 }
 
 class CustomModelStore {
@@ -30,8 +35,19 @@ class CustomModelStore {
         .toList();
   }
 
-  Future<CustomSpeechModel> importFile(String sourcePath) async {
+  Future<CustomSpeechModel> importFile(String sourcePath,
+      {bool inPlace = false}) async {
     final source = File(sourcePath);
+    String? projectPath;
+    if (inPlace) {
+      final resolved = await source.resolveSymbolicLinks();
+      final root = await ProjectStorage.instance.models.resolveSymbolicLinks();
+      if (!p.isWithin(root, resolved)) {
+        throw const FileSystemException(
+            'In-place models must be inside this project’s .aurascribe/models directory. Copy the file there first, or use a copied import.');
+      }
+      projectPath = p.relative(resolved, from: root);
+    }
     final header = await GgufHeader.inspect(source);
     if (!{
       'parakeet',
@@ -40,6 +56,7 @@ class CustomModelStore {
       'sensevoice',
       'cohere_asr',
       'gigaam',
+      'granite_speech5_ctc',
       'moonshine',
       'moonshine_streaming'
     }.contains(header['general.architecture'])) {
@@ -51,14 +68,15 @@ class CustomModelStore {
         'custom-$hash',
         header['general.name'] ?? source.uri.pathSegments.last,
         header['general.architecture']!,
-        '$hash.gguf');
+        '$hash.gguf',
+        projectPath: projectPath);
     final target = File('${(await directory).path}/${model.filename}');
     if (await FileSystemEntity.type(target.path, followLinks: false) ==
         FileSystemEntityType.link) {
       throw const FileSystemException(
           'A model import cannot overwrite a symbolic link.');
     }
-    if (!await target.exists()) {
+    if (!inPlace && !await target.exists()) {
       final temporary = File('${target.path}.part');
       await source.openRead().pipe(temporary.openWrite());
       if ((await sha256.bind(temporary.openRead()).first).toString() != hash) {
@@ -78,6 +96,16 @@ class CustomModelStore {
   }
 
   Future<String> path(CustomSpeechModel model) async {
+    if (model.projectPath != null) {
+      final root = await ProjectStorage.instance.models.resolveSymbolicLinks();
+      final candidate = File(p.join(root, model.projectPath!));
+      final resolved = await candidate.resolveSymbolicLinks();
+      if (!p.isWithin(root, resolved)) {
+        throw const FileSystemException(
+            'Model reference leaves project storage.');
+      }
+      return resolved;
+    }
     if (!RegExp(r'^[a-f0-9]{64}\.gguf$').hasMatch(model.filename)) {
       throw const FormatException('Invalid custom-model filename.');
     }

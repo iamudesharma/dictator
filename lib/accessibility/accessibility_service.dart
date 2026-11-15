@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 /// Dart-side bridge to the native Swift AccessibilityPlugin.
 /// Handles text insertion into the currently focused system-wide text field.
 class AccessibilityService {
+  bool smartSpacing = false;
+  bool returnToApp = true;
   bool terminalPaste = false;
   bool restoreClipboard = true;
   static const _channel = MethodChannel('com.aurascribe/accessibility');
@@ -55,6 +57,8 @@ class AccessibilityService {
     try {
       final result = await _channel.invokeMethod<bool>('replaceSelectedText', {
         'text': text,
+        'smartSpacing': smartSpacing,
+        'returnToApp': returnToApp,
         'terminalPaste': terminalPaste,
         'restoreClipboard': restoreClipboard
       });
@@ -79,6 +83,8 @@ class AccessibilityService {
     try {
       final result = await _channel.invokeMethod<bool>('insertText', {
         'text': text,
+        'smartSpacing': smartSpacing,
+        'returnToApp': returnToApp,
         'terminalPaste': terminalPaste,
         'restoreClipboard': restoreClipboard
       });

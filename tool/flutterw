@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+root="$(cd "$(dirname "$0")/.." && pwd)"
+version="$(cat "$root/.flutter-version")"
+flutter_bin="${FLUTTER_BIN:-$root/.aurascribe/tools/flutter-$version/bin/flutter}"
+if [[ ! -x "$flutter_bin" ]]; then
+  echo "Flutter $version is required. Install it under .aurascribe/tools/flutter-$version or set FLUTTER_BIN." >&2
+  exit 1
+fi
+exec "$flutter_bin" "$@"

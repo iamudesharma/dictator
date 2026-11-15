@@ -189,3 +189,35 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Additional speech model catalog references
+
+Artifact metadata for Orukeet and Granite Speech 5.0, model language capabilities,
+language labels and published benchmark records are sourced from Hex
+v3.4.0, commit 8766d096eb3c98a5b1a54cb966a6daa717bc839d (MIT, above).
+Weights are optional downloads and are not included in this repository.
+
+Orukeet: Oruk AI, based on NVIDIA Parakeet TDT 0.6B v3 (base: CC BY 4.0);
+Oruk AI's r3 adaptation: CC BY-SA 4.0. GGUF conversion and Q8 quantization
+by handy-computer, without retraining. Source and notice:
+https://huggingface.co/handy-computer/orukeet-gguf/blob/c5511a3850fce1cbbfa5d94ef815966e1d99275f/README.md
+License: https://creativecommons.org/licenses/by-sa/4.0/legalcode.en
+
+Granite Speech 5.0 470M TurboCTC multilingual: IBM Granite (Apache-2.0);
+GGUF distribution includes license and notice:
+https://huggingface.co/17slever17/granite-speech-5.0-470m-turboctc-multilingual-GGUF/tree/62f64d9d5ad35989b06caf199cafe7155944a22b
+
+### Hex interface translations
+
+`tool/l10n/hex.json` and the Traditional Chinese conversion table are adapted from
+Anomaly's Hex v3.4.0 (`8766d096eb3c98a5b1a54cb966a6daa717bc839d`), specifically
+`src/desktop/i18n.rs` and `src/desktop/i18n/`. They are distributed under the Hex
+MIT license reproduced above. AuraScribe-specific interface strings are maintained
+in `tool/l10n/*.tsv`; generated runtime catalogs are in `assets/l10n/`.
+
+### Shared GGML runtime modification
+
+The shared speech runtime builds pinned transcribe.cpp with the project-owned
+`tool/native_patches/accelerate_gemv.patch`, using Apple's system Accelerate
+framework for supported float32 matrix-vector products. The upstream transcribe.cpp
+and GGML notices above continue to apply. The optional CLI source is unmodified.

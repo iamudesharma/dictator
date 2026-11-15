@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import '../app/dictation_orchestrator.dart';
 import '../grammar/smart_command_service.dart';
@@ -115,7 +116,7 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                       Row(children: [
                         if (_custom)
                           IconButton(
-                              tooltip: 'Back to commands',
+                              tooltip: tr("Back to commands"),
                               onPressed: running
                                   ? null
                                   : () {
@@ -130,13 +131,13 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                         Expanded(
                             child: Text(
                                 _custom
-                                    ? 'Custom instruction'
-                                    : 'Smart Commands',
+                                    ? tr("Custom instruction")
+                                    : tr("Smart Commands"),
                                 style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600))),
                         IconButton(
-                            tooltip: 'Close commands',
+                            tooltip: tr("Close commands"),
                             onPressed: running
                                 ? null
                                 : widget.orchestrator.closeSmartCommandHUD,
@@ -144,14 +145,14 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                       ]),
                       const SizedBox(height: 8),
                       if (running)
-                        const Expanded(
+                        Expanded(
                             child: Center(
                                 child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                              CircularProgressIndicator(strokeWidth: 2),
-                              SizedBox(height: 18),
-                              Text('Processing selected text…')
+                              const CircularProgressIndicator(strokeWidth: 2),
+                              const SizedBox(height: 18),
+                              Text(tr("Processing selected text…"))
                             ]))),
                       if (!running && error != null)
                         Expanded(
@@ -165,7 +166,7 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                                   fontSize: 13,
                                   height: 1.5)),
                           const SizedBox(height: 16),
-                          const Text('Press Escape to close.'),
+                          Text(tr("Press Escape to close.")),
                         ]))),
                       if (!running && error == null && _custom) ...[
                         Expanded(
@@ -176,16 +177,16 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                                 minLines: null,
                                 maxLines: null,
                                 textAlignVertical: TextAlignVertical.top,
-                                decoration: const InputDecoration(
-                                    labelText: 'Instruction',
-                                    hintText:
-                                        'Turn this into concise bullet points'))),
+                                decoration: InputDecoration(
+                                    labelText: tr("Instruction"),
+                                    hintText: tr(
+                                        "Turn this into concise bullet points")))),
                         const SizedBox(height: 12),
                         Align(
                             alignment: Alignment.centerRight,
                             child: FilledButton(
                                 onPressed: _executeCustom,
-                                child: const Text('Apply instruction'))),
+                                child: Text(tr("Apply instruction")))),
                       ],
                       if (!running && error == null && !_custom) ...[
                         Expanded(
@@ -211,7 +212,7 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                                           size: 19),
                                       title: Text(
                                           i < _commands.length
-                                              ? _commands[i].label
+                                              ? tr(_commands[i].label)
                                               : _personal[i - _commands.length]
                                                   .name,
                                           style: const TextStyle(fontSize: 13)),
@@ -226,7 +227,7 @@ class _SmartCommandHUDState extends State<SmartCommandHUD> {
                                     ))),
                         ])),
                         const SizedBox(height: 8),
-                        Text('↑ ↓ to choose    Return to apply    Esc to close',
+                        Text(tr("↑ ↓ to choose    Return to apply    Esc to close"),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 11, color: colors.onSurfaceVariant)),

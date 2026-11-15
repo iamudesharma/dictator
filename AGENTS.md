@@ -6,6 +6,10 @@ macOS-only Flutter menu bar app for offline voice dictation. Runs in the system 
 
 ## Build & Run
 
+This checkout uses Flutter 3.50.0 / Dart 3.14.0, pinned in `.flutter-version`.
+Use `bash tool/flutterw` in place of `flutter` below to select the project-local
+SDK, or set `FLUTTER_BIN` to a matching SDK. See `docs/metal-native-interop.md`.
+
 ```bash
 # Debug
 flutter run -d macos
@@ -116,3 +120,27 @@ bash create_dmg.sh
   and a supplied WAV; `tool/vm_heap_profile.dart` collects aggregate test allocations.
 - See `docs/memory-results.md`; fresh launch footprint is not transcription peak,
   and app-only RSS excludes model worker processes.
+
+## Retained GGUF Metal runtime
+
+- GGUF inference uses generated FFIgen C bindings in `lib/transcription/native`.
+  One worker isolate owns the model/session and serializes all synchronous native
+  calls. Never share native handles across isolates or run inference on the UI isolate.
+- Model lifetime follows the existing memory leases/idle-pressure policy. Free the
+  session before its model; preserve vocabulary, timestamps and CPU recovery.
+- Regenerate with `bash tool/generate_speech_bindings.sh` (isolated FFIgen 23 tool
+  package). Build the pinned shared runtime with `bash tool/build_transcribe_ffi.sh`.
+  Preserve the CLI, Gemma phase and Moonshine worker used by other features.
+
+- `macos/native/pcm_reader.c` supplies bounded native PCM conversion and the file
+  API silence gate through generated bindings. Keep its integer energy threshold
+  equivalent to `PcmWave.writeClip`; preserve `libaurascribe_audio.dylib` in the
+  runtime build/bundle. Opt-in regression: `tool/verify_native_pcm_test.dart`.
+- Current resource comparison and measurement limits: `docs/resource-performance.md`.
+  CPU counters use Mach timebase conversion; RSS and physical footprint differ.
+
+- The shared runtime applies `tool/native_patches/accelerate_gemv.patch` to a
+  separate content-addressed copy of the pinned source. Keep `.reference` clean;
+  preserve the float32 shape/stride/reference guards and original fallback.
+  Native verification: `bash tool/verify_accelerate_gemv.sh` (336 matrix cases).
+  Latest CPU/RSS/physical-footprint measurements: `docs/native-profile-results.md`.

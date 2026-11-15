@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/services.dart';
 import 'package:crypto/crypto.dart';
@@ -68,6 +69,28 @@ class ProjectStorage {
     return bytes;
   }
 
+  final _verified = <String, String>{};
+  static Future<String> _digest(String path) async {
+    // Apple's system crypto implementation is substantially faster for large
+    // weights. Arguments bypass a shell; only a complete SHA-256 is accepted.
+    if (Platform.isMacOS) {
+      try {
+        final result = await Process.run(
+            '/usr/bin/openssl', ['dgst', '-sha256', '-r', path]);
+        final digest = RegExp(r'^([a-fA-F0-9]{64})(?:\s|$)')
+            .firstMatch(result.stdout as String);
+        if (result.exitCode == 0 && digest != null) {
+          return digest[1]!.toLowerCase();
+        }
+      } on ProcessException {/* Portable verifier below remains available. */}
+    }
+    return Isolate.run(() async =>
+        (await sha256.bind(File(path).openRead()).first).toString());
+  }
+
+  static String _signature(FileStat stat) =>
+      '${stat.size}:${stat.modified.microsecondsSinceEpoch}:${stat.changed.microsecondsSinceEpoch}:${stat.mode}';
+
   final Map<String, Future<String>> _downloads = {};
   final Map<String, http.Client> _clients = {};
   final Set<String> _cancelled = {};
@@ -134,9 +157,15 @@ class ProjectStorage {
             length >= minBytes) {
           if (expectedBytes == null || length == expectedBytes) {
             if (expectedSha256 == null) return file.path;
-            final digest =
-                (await sha256.bind(file.openRead()).first).toString();
-            if (digest == expectedSha256) return file.path;
+            final key = '${file.path}:$expectedSha256';
+            final before = _signature(await file.stat());
+            if (_verified[key] == before) return file.path;
+            final digest = await _digest(file.path);
+            final after = _signature(await file.stat());
+            if (digest == expectedSha256 && before == after) {
+              _verified[key] = after;
+              return file.path;
+            }
           }
         }
       } catch (_) {/* Redownload incomplete/unrecognized installs. */}
@@ -186,8 +215,7 @@ class ProjectStorage {
             'Model size does not match the pinned catalog.');
       }
       if (expectedSha256 != null &&
-          (await sha256.bind(partial.openRead()).first).toString() !=
-              expectedSha256) {
+          await _digest(partial.path) != expectedSha256) {
         throw const HttpException(
             'Model checksum does not match the pinned catalog.');
       }

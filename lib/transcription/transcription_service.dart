@@ -1,5 +1,7 @@
+import 'apple_transcription_backend.dart';
 import 'gguf_catalog.dart';
 import '../memory/model_memory_policy.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 
@@ -7,6 +9,7 @@ import '../settings/settings_service.dart';
 import '../shared/stt_engine.dart';
 import 'gemma_transcription_backend.dart';
 import 'stt_backend.dart';
+import 'timed_transcript.dart';
 import 'gguf_transcription_backend.dart';
 import 'moonshine_transcription_backend.dart';
 import 'whisper_transcription_backend.dart';
@@ -25,6 +28,7 @@ class TranscriptionService extends ChangeNotifier {
   WhisperTranscriptionBackend? _whisper;
   GemmaTranscriptionBackend? _gemma;
   SherpaNemotronTranscriptionBackend? _nemotron;
+  AppleTranscriptionBackend? _apple;
   SttEngine _activeEngine;
 
   final ModelMemoryPolicy? memory;
@@ -34,8 +38,10 @@ class TranscriptionService extends ChangeNotifier {
 
   Future<T> _serialize<T>(Future<T> Function() operation) {
     final next = _operationTail.then((_) => operation());
-    _operationTail =
-        next.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    _operationTail = next.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
     return next;
   }
 
@@ -43,7 +49,7 @@ class TranscriptionService extends ChangeNotifier {
       memory == null ? operation() : memory!.run(operation);
 
   TranscriptionService(this._settings, {this.memory, this.backendFactory})
-      : _activeEngine = SttEngineX.fromIndex(_settings.sttEngineIndex);
+    : _activeEngine = SttEngineX.fromIndex(_settings.sttEngineIndex);
 
   Future<String?>? _loadInFlight;
 
@@ -116,17 +122,22 @@ class TranscriptionService extends ChangeNotifier {
 
   /// Load the engine selected in settings (unloads the other backend).
   /// Concurrent callers share the same in-flight load.
+  String? get computeBackend {
+    final backend = _activeBackend();
+    return backend is GgufTranscriptionBackend ? backend.nativeBackend : null;
+  }
+
   Future<String?> loadModel() => ensureLoaded();
 
   /// Blocks until the active STT engine is ready. Safe to call while a load is
   /// already in progress (e.g. background preload + user hotkey).
   Future<String?> ensureLoaded() => _use(() async {
-        // Even an apparently loaded engine may currently be inside idle cleanup.
-        // Acquire the activity fence before inspecting its native lifetime.
-        if (isLoaded) return null;
-        _loadInFlight ??= _serialize(_loadSelectedEngine);
-        return _loadInFlight!;
-      });
+    // Even an apparently loaded engine may currently be inside idle cleanup.
+    // Acquire the activity fence before inspecting its native lifetime.
+    if (isLoaded) return null;
+    _loadInFlight ??= _serialize(_loadSelectedEngine);
+    return _loadInFlight!;
+  });
 
   Future<String?> _loadSelectedEngine() async {
     try {
@@ -142,42 +153,101 @@ class TranscriptionService extends ChangeNotifier {
   }
 
   /// Call after user changes STT engine in settings.
-  Future<void> switchEngine(SttEngine engine) =>
-      _use(() => _serialize(() async {
-            if (engine == _activeEngine && isLoaded) return;
-            await _disposeActive();
-            _activeEngine = engine;
-            await _settings.setSttEngineIndex(engine.index);
-            final error = await _loadActive();
-            if (error != null) throw StateError(error);
-            notifyListeners();
-          }));
+  Future<void> switchEngine(SttEngine engine) => _use(
+    () => _serialize(() async {
+      if (engine == _activeEngine && isLoaded) return;
+      await _disposeActive();
+      _activeEngine = engine;
+      await _settings.setSttEngineIndex(engine.index);
+      final error = await _loadActive();
+      if (error != null) throw StateError(error);
+      notifyListeners();
+    }),
+  );
 
   Future<void> unloadModel() => _use(releaseIdleResources);
 
   /// Called only behind the shared idle fence, or an explicit activity lease.
   Future<void> releaseIdleResources() => _serialize(() async {
-        await _disposeActive();
+    await _disposeActive();
+    notifyListeners();
+  });
+
+  Future<void> reloadModelIfNeeded() => _use(
+    () => _serialize(() async {
+      final w = _whisper;
+      if (_activeEngine == SttEngine.whisper && w != null) {
+        await w.reloadIfModelChanged();
         notifyListeners();
-      });
+      }
+    }),
+  );
 
-  Future<void> reloadModelIfNeeded() => _use(() => _serialize(() async {
-        final w = _whisper;
-        if (_activeEngine == SttEngine.whisper && w != null) {
-          await w.reloadIfModelChanged();
-          notifyListeners();
-        }
-      }));
+  Future<String> transcribe(String audioPath) => _use(
+    () => _serialize(() async {
+      if (!isLoaded) {
+        final error = await _loadActive();
+        if (error != null) throw StateError(error);
+      }
+      final rawTranscript = await _activeBackend()!.transcribe(audioPath);
+      return _cleanTranscriptionNoise(rawTranscript);
+    }),
+  );
 
-  Future<String> transcribe(String audioPath) =>
-      _use(() => _serialize(() async {
-            if (!isLoaded) {
-              final error = await _loadActive();
-              if (error != null) throw StateError(error);
-            }
-            final rawTranscript = await _activeBackend()!.transcribe(audioPath);
-            return _cleanTranscriptionNoise(rawTranscript);
-          }));
+  Future<TimedTranscript> transcribeTimed(
+    String path, {
+    required String timestamps,
+  }) => _use(
+    () => _serialize(() async {
+      if (!isLoaded) {
+        final error = await _loadSelectedEngine();
+        if (error != null) throw StateError(error);
+      }
+      final backend = _activeBackend()!;
+      if (backend is! TimedSttBackend) {
+        throw UnsupportedError(
+          'Choose a GGUF or Apple Speech model for native timestamps.',
+        );
+      }
+      return (backend as TimedSttBackend).transcribeTimed(
+        path,
+        timestamps: timestamps,
+      );
+    }),
+  );
+
+  bool get supportsFileSlices => _activeBackend() is SlicedSttBackend;
+
+  Future<TimedTranscript> transcribeSlice(
+    String path, {
+    required int startSample,
+    required int sampleCount,
+    required String timestamps,
+  }) => _use(
+    () => _serialize(() async {
+      if (!isLoaded) {
+        final error = await _loadSelectedEngine();
+        if (error != null) throw StateError(error);
+      }
+      final backend = _activeBackend();
+      if (backend is! SlicedSttBackend) {
+        throw UnsupportedError('This backend does not support WAV slices.');
+      }
+      final result = await (backend as SlicedSttBackend).transcribeSlice(
+        path,
+        startSample: startSample,
+        sampleCount: sampleCount,
+        timestamps: timestamps,
+        skipSilence: true,
+      );
+      return timestamps == 'none'
+          ? TimedTranscript(
+              _cleanTranscriptionNoise(result.text),
+              skippedSilence: result.skippedSilence,
+            )
+          : result;
+    }),
+  );
 
   String _cleanTranscriptionNoise(String text) {
     // Matches any [noise] or (noise) annotations generated by Whisper for non-speech events
@@ -205,6 +275,9 @@ class TranscriptionService extends ChangeNotifier {
     if (backend != null) await backend.dispose();
     _injectedBackends.remove(_activeEngine);
     switch (_activeEngine) {
+      case SttEngine.apple:
+        _apple = null;
+        break;
       case SttEngine.gemma:
         _gemma = null;
         break;
@@ -223,29 +296,43 @@ class TranscriptionService extends ChangeNotifier {
     }
   }
 
-  SttBackend? _activeBackend() =>
-      _injectedBackends[_activeEngine] ??
-      switch (_activeEngine) {
-        SttEngine.gguf => _gguf,
-        SttEngine.moonshine => _moonshine,
-        SttEngine.whisper => _whisper,
-        SttEngine.gemma => _gemma,
-        SttEngine.nemotron => _nemotron,
-      };
+  SttBackend? _activeBackend() {
+    final injected = _injectedBackends[_activeEngine];
+    if (injected != null) return injected;
+    switch (_activeEngine) {
+      case SttEngine.apple:
+        return _apple;
+      case SttEngine.gguf:
+        return _gguf;
+      case SttEngine.moonshine:
+        return _moonshine;
+      case SttEngine.whisper:
+        return _whisper;
+      case SttEngine.gemma:
+        return _gemma;
+      case SttEngine.nemotron:
+        return _nemotron;
+    }
+  }
 
   SttBackend? _ensureBackend(SttEngine engine) {
     if (backendFactory != null) {
       return _injectedBackends.putIfAbsent(
-          engine, () => backendFactory!(engine));
+        engine,
+        () => backendFactory!(engine),
+      );
     }
     switch (engine) {
+      case SttEngine.apple:
+        return _apple ??= AppleTranscriptionBackend(_settings);
       case SttEngine.gguf:
         final b = _gguf ??= GgufTranscriptionBackend(_settings);
         b.onProgress = notifyListeners;
         return b;
       case SttEngine.moonshine:
         final b = _moonshine ??= MoonshineTranscriptionBackend(
-            releaseAfterClip: _settings.unloadIdleModels);
+          releaseAfterClip: _settings.unloadIdleModels,
+        );
         b.onProgress = notifyListeners;
         return b;
       case SttEngine.gemma:
@@ -254,8 +341,10 @@ class TranscriptionService extends ChangeNotifier {
             'The speaker has an Indian English accent. Transcribe the spoken English accurately, '
             'accounting for retroflex sounds, syllable-timed rhythm, and typical Indian English pronunciation patterns. '
             'Use digits for numbers. Output only the transcription, nothing else.';
-        final b =
-            _gemma ??= GemmaTranscriptionBackend(_settings, prompt: promptText);
+        final b = _gemma ??= GemmaTranscriptionBackend(
+          _settings,
+          prompt: promptText,
+        );
         b.onProgress = notifyListeners;
         return b;
       case SttEngine.whisper:
@@ -271,6 +360,8 @@ class TranscriptionService extends ChangeNotifier {
 
   String _labelFor(SttEngine engine) {
     switch (engine) {
+      case SttEngine.apple:
+        return 'Apple Speech (on device)';
       case SttEngine.gemma:
         return 'Gemma 4 E2B (GPU)';
       case SttEngine.gguf:
@@ -294,6 +385,7 @@ class TranscriptionService extends ChangeNotifier {
       backend.dispose();
     }
     _injectedBackends.clear();
+    _apple?.dispose();
     _gguf?.dispose();
     _moonshine?.dispose();
     _whisper?.dispose();

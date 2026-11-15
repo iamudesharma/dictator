@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/widget_previews.dart';
 
 /// A compact preview of the native, click-through 104×30 macOS panel.
@@ -6,7 +6,7 @@ import 'package:flutter/widget_previews.dart';
 class DictationIndicator extends StatelessWidget {
   final String label;
   final String? transcript, hint;
-  final bool recording, error, preparing, atTop;
+  final bool recording, error, preparing, atTop, animated;
   final double level;
   final VoidCallback? onStop;
   const DictationIndicator(
@@ -18,6 +18,7 @@ class DictationIndicator extends StatelessWidget {
       this.error = false,
       this.preparing = false,
       this.atTop = true,
+      this.animated = true,
       this.level = 0,
       this.onStop});
 
@@ -55,12 +56,18 @@ class DictationIndicator extends StatelessWidget {
                                   if (recording)
                                     VoiceLevelBars(level: level)
                                   else
-                                    const SizedBox(
+                                    SizedBox(
                                         width: 25,
                                         height: 10,
                                         child: LinearProgressIndicator(
+                                            value: animated &&
+                                                    !MediaQuery
+                                                        .disableAnimationsOf(
+                                                            context)
+                                                ? null
+                                                : 0.5,
                                             minHeight: 2,
-                                            color: Color(0xFF91DED9),
+                                            color: const Color(0xFF91DED9),
                                             backgroundColor:
                                                 Colors.transparent)),
                                   const SizedBox(width: 2),

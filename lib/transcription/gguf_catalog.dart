@@ -1,4 +1,4 @@
-// Pinned artifact facts from anomalyco/hex 6813f740 (MIT). See THIRD_PARTY_NOTICES.md.
+// Pinned artifact facts from anomalyco/hex 8766d096 (v3.4.0) (MIT). See THIRD_PARTY_NOTICES.md.
 class GgufModel {
   final String id, name, architecture, repository, revision, filename, sha256;
   final int bytes;
@@ -9,6 +9,24 @@ class GgufModel {
 }
 
 const ggufCatalog = <GgufModel>[
+  GgufModel(
+      'granite_speech_5',
+      'Granite Speech 5.0 470M TurboCTC',
+      'granite_speech5_ctc',
+      '17slever17/granite-speech-5.0-470m-turboctc-multilingual-GGUF',
+      '62f64d9d5ad35989b06caf199cafe7155944a22b',
+      'granite-speech-5.0-470m-turboctc-multilingual-Q8_0.gguf',
+      505663136,
+      'f3efdc05b85b3a764bb5bb7022e69f61cafcecc11605c881c6396a6ed07ec91b'),
+  GgufModel(
+      'orukeet',
+      'Orukeet',
+      'parakeet',
+      'handy-computer/orukeet-gguf',
+      'c5511a3850fce1cbbfa5d94ef815966e1d99275f',
+      'orukeet-Q8_0.gguf',
+      739508704,
+      '68cd64b2a6c3c747f0a9f109884ed75b277c266c0fb8e5888c5a9f4d824fb9f7'),
   GgufModel(
       'parakeet_v2',
       'Parakeet v2',

@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'shortcut_binding.dart';
 
 class ShortcutRecorder extends StatefulWidget {
   final ShortcutAction action;
-  const ShortcutRecorder({super.key, required this.action});
+  final bool sided;
+  const ShortcutRecorder({super.key, required this.action, this.sided = false});
   @override
   State<ShortcutRecorder> createState() => _ShortcutRecorderState();
 }
@@ -37,25 +39,24 @@ class _ShortcutRecorderState extends State<ShortcutRecorder> {
           return;
         }
         if (event is! KeyDownEvent) return;
-        if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (event.logicalKey == LogicalKeyboardKey.escape &&
+            widget.action != ShortcutAction.cancel) {
           Navigator.pop(context);
           return;
         }
         final standalone = ShortcutBinding.chord(event.physicalKey, {});
         if (standalone.isModifierOnly) {
-          final count = HardwareKeyboard.instance.physicalKeysPressed
-              .where((key) =>
-                  ShortcutBinding.modifierKeyCodes.containsKey(key.usbHidUsage))
-              .length;
           setState(() {
             _error = null;
-            _modifier = modifierOnly && count == 1 ? standalone : null;
+            _modifier = modifierOnly
+                ? ShortcutBinding.fromEvent(event, sided: widget.sided)
+                : null;
           });
           return;
         }
         _modifier = null;
         try {
-          final binding = ShortcutBinding.fromEvent(event);
+          final binding = ShortcutBinding.fromEvent(event, sided: widget.sided);
           binding.validate(allowModifierOnly: modifierOnly);
           Navigator.pop(context, binding);
         } catch (e) {
@@ -64,18 +65,21 @@ class _ShortcutRecorderState extends State<ShortcutRecorder> {
         }
       },
       child: AlertDialog(
-          title: Text(widget.action.label),
+          title: Text(tr(widget.action.label)),
           content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.action == ShortcutAction.dictation
-                    ? 'Press and release Option, Control, Command, Shift or Fn to use it alone. Or hold a modifier and press another key.'
-                    : 'Hold Option, Command or Control, then press another key.'),
+                    ? tr(
+                        "Press and release Option, Control, Command, Shift or Fn to use it alone. Or hold a modifier and press another key.")
+                    : tr(
+                        "Hold Option, Command or Control, then press another key.")),
                 if (_modifier != null)
                   Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text('Release ${_modifier!.label} to select it.')),
+                      child: Text(tr("Release {v0} to select it.",
+                          values: {"v0": _modifier!.label}))),
                 if (_error != null)
                   Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -86,6 +90,6 @@ class _ShortcutRecorderState extends State<ShortcutRecorder> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'))
+                child: Text(tr("Cancel")))
           ]));
 }

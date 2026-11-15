@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voice_to_text/storage/project_storage.dart';
 
@@ -34,6 +35,38 @@ void main() {
     await Link('${project.path}/.aurascribe/models/external')
         .create(project.parent.path);
     await expectLater(storage.directory('models/external'), throwsStateError);
+  });
+
+  test('verified session reuse still rejects same-size modified weights',
+      () async {
+    final project = await Directory.current.createTemp('.integrity-test-');
+    addTearDown(() => project.delete(recursive: true));
+    await File('${project.path}/pubspec.yaml').writeAsString('name: fixture');
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    final bytes = [1, 2, 3, 4, 5, 6];
+    var requests = 0;
+    server.listen((request) async {
+      requests++;
+      request.response.contentLength = bytes.length;
+      request.response.add(bytes);
+      await request.response.close();
+    });
+    final storage = ProjectStorage(project);
+    Future<String> prepare() => storage.download(
+        folder: 'fixture',
+        name: 'verified.bin',
+        url: Uri.parse('http://127.0.0.1:${server.port}/model'),
+        expectedBytes: bytes.length,
+        expectedSha256: sha256.convert(bytes).toString());
+    final path = await prepare();
+    await prepare();
+    await prepare();
+    expect(requests, 1);
+    await File(path).writeAsBytes([6, 5, 4, 3, 2, 1], flush: true);
+    await prepare();
+    expect(requests, 2);
+    expect(await File(path).readAsBytes(), bytes);
   });
 
   test('cancelled model downloads close the transfer and remove partial files',

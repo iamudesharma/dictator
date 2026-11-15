@@ -4,11 +4,11 @@ import 'dart:async';
 /// long-lived recording/meeting tasks. Arrivals wait for an unloading model.
 class ModelMemoryPolicy {
   ModelMemoryPolicy({
-    required Future<void> Function() unload,
+    required this._unload,
     this.enabled = true,
     this.delay = const Duration(seconds: 60),
     this.onError,
-  }) : _unload = unload;
+  });
 
   final Future<void> Function() _unload;
   final void Function(Object, StackTrace)? onError;

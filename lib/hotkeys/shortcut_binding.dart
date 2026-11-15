@@ -6,38 +6,76 @@ enum ShortcutAction {
   rawDictation,
   pasteLast,
   smartCommands,
-  capture
+  capture,
+  cancel,
+  extra1,
+  extra2,
+  extra3,
+  extra4,
+  secondDictation,
+  terminalDictation,
+  typedText,
+  replay
 }
 
 extension ShortcutActionLabel on ShortcutAction {
+  bool get isAdditionalDictation =>
+      (index >= ShortcutAction.extra1.index &&
+          index <= ShortcutAction.extra4.index) ||
+      this == ShortcutAction.secondDictation;
+  bool get isOptional => index >= ShortcutAction.extra1.index;
   String get label => switch (this) {
         ShortcutAction.dictation => 'Dictation',
         ShortcutAction.rawDictation => 'Dictate without processing',
         ShortcutAction.pasteLast => 'Paste last dictation',
         ShortcutAction.smartCommands => 'Smart Commands',
         ShortcutAction.capture => 'Annotate screen',
+        ShortcutAction.cancel => 'Cancel dictation',
+        ShortcutAction.extra1 => 'Additional dictation 1',
+        ShortcutAction.extra2 => 'Additional dictation 2',
+        ShortcutAction.extra3 => 'Additional dictation 3',
+        ShortcutAction.extra4 => 'Additional dictation 4',
+        ShortcutAction.secondDictation => 'Second dictation shortcut',
+        ShortcutAction.terminalDictation => 'Dictate to terminal',
+        ShortcutAction.typedText => 'Process focused text',
+        ShortcutAction.replay => 'Save screen replay',
       };
 }
 
 class ShortcutBinding {
   final int usage;
   final Set<HotKeyModifier> modifiers;
-  const ShortcutBinding(this.usage, this.modifiers);
+  final Set<int> sides;
+  const ShortcutBinding(this.usage, this.modifiers, {this.sides = const {}});
   factory ShortcutBinding.fromJson(Map<String, dynamic> json) =>
       ShortcutBinding(
           json['usage'] as int,
           (json['modifiers'] as List)
               .map((m) => HotKeyModifier.values.byName(m as String))
-              .toSet());
+              .toSet(),
+          sides: (json['sides'] as List? ?? []).cast<int>().toSet());
   Map<String, dynamic> toJson() => {
         'usage': usage,
-        'modifiers': modifiers.map((m) => m.name).toList()..sort()
+        'modifiers': modifiers.map((m) => m.name).toList()..sort(),
+        if (sides.isNotEmpty) 'sides': sides.toList()..sort()
       };
-  static ShortcutBinding fromEvent(KeyDownEvent event) => ShortcutBinding(
-      event.physicalKey.usbHidUsage,
-      HotKeyModifier.values
-          .where((m) => m.isModifierPressed && m != HotKeyModifier.capsLock)
-          .toSet());
+  static ShortcutBinding fromEvent(KeyDownEvent event, {bool sided = false}) =>
+      ShortcutBinding(
+          event.physicalKey.usbHidUsage,
+          HotKeyModifier.values
+              .where((m) =>
+                  m.isModifierPressed &&
+                  m != HotKeyModifier.capsLock &&
+                  !m.physicalKeys.contains(event.physicalKey))
+              .toSet(),
+          sides: sided
+              ? HardwareKeyboard.instance.physicalKeysPressed
+                  .where((k) =>
+                      modifierKeyCodes.containsKey(k.usbHidUsage) &&
+                      k != event.physicalKey)
+                  .map((k) => k.usbHidUsage)
+                  .toSet()
+              : {});
   static ShortcutBinding chord(
           PhysicalKeyboardKey key, Set<HotKeyModifier> mods) =>
       ShortcutBinding(key.usbHidUsage, mods);
@@ -51,13 +89,12 @@ class ShortcutBinding {
     0x700e3: 55, 0x700e7: 54, // Command
     0x12: 63, // Fn / Globe
   };
-  bool get isModifierOnly =>
-      modifiers.isEmpty && modifierKeyCodes.containsKey(usage);
+  bool get isModifierOnly => modifierKeyCodes.containsKey(usage);
   int? get modifierKeyCode => isModifierOnly ? modifierKeyCodes[usage] : null;
   static ShortcutBinding get optionChord =>
       chord(PhysicalKeyboardKey.keyT, {HotKeyModifier.alt});
   String get signature =>
-      '$usage:${(modifiers.map((m) => m.name).toList()..sort()).join(",")}';
+      '$usage:${(modifiers.map((m) => m.name).toList()..sort()).join(",")}:${(sides.toList()..sort()).join(",")}';
   // PhysicalKeyboardKey.debugName is stripped from release builds.
   String get keyLabel {
     final modifier = const {
@@ -120,17 +157,24 @@ class ShortcutBinding {
         'Key 0x${usage.toRadixString(16)}';
   }
 
-  String get label => isModifierOnly
+  String get label => isModifierOnly && modifiers.isEmpty
       ? keyLabel
       : '${[
           if (modifiers.contains(HotKeyModifier.control)) "⌃",
           if (modifiers.contains(HotKeyModifier.alt)) "⌥",
           if (modifiers.contains(HotKeyModifier.shift)) "⇧",
           if (modifiers.contains(HotKeyModifier.meta)) "⌘"
-        ].join(" ")} $keyLabel';
+        ].join(" ")} $keyLabel${sides.isEmpty ? '' : ' (${sides.map((u) => ShortcutBinding(u, {}).keyLabel).join(' + ')})'}';
   void validate({bool allowModifierOnly = false}) {
     final k = key;
     if (allowModifierOnly && isModifierOnly) return;
+    if (modifiers.isEmpty &&
+        (usage == PhysicalKeyboardKey.escape.usbHidUsage ||
+            (usage >= 0x7003a && usage <= 0x70052) ||
+            usage == 0x70064 ||
+            usage == 0x70065)) {
+      return;
+    }
     if (isModifierOnly ||
         HotKeyModifier.values.any((m) => m.physicalKeys.contains(k))) {
       throw ArgumentError('Press a key as well as a modifier.');
@@ -156,6 +200,22 @@ class ShortcutBinding {
   static ShortcutBinding get legacyDictation => chord(
       PhysicalKeyboardKey.space, {HotKeyModifier.meta, HotKeyModifier.shift});
   static Map<ShortcutAction, ShortcutBinding> get defaults => {
+        ShortcutAction.secondDictation: chord(PhysicalKeyboardKey.digit5,
+            {HotKeyModifier.meta, HotKeyModifier.alt, HotKeyModifier.control}),
+        ShortcutAction.terminalDictation: chord(PhysicalKeyboardKey.keyT,
+            {HotKeyModifier.meta, HotKeyModifier.alt, HotKeyModifier.shift}),
+        ShortcutAction.typedText: chord(PhysicalKeyboardKey.keyR,
+            {HotKeyModifier.meta, HotKeyModifier.alt, HotKeyModifier.shift}),
+        ShortcutAction.replay: chord(PhysicalKeyboardKey.keyS,
+            {HotKeyModifier.meta, HotKeyModifier.alt, HotKeyModifier.shift}),
+        ShortcutAction.cancel: chord(PhysicalKeyboardKey.escape, {}),
+        for (var i = 0; i < 4; i++)
+          ShortcutAction.values[ShortcutAction.extra1.index + i]:
+              ShortcutBinding(0x7001e + i, {
+            HotKeyModifier.meta,
+            HotKeyModifier.alt,
+            HotKeyModifier.control
+          }),
         ShortcutAction.dictation: chord(PhysicalKeyboardKey.altLeft, {}),
         ShortcutAction.rawDictation: chord(PhysicalKeyboardKey.keyD,
             {HotKeyModifier.meta, HotKeyModifier.alt, HotKeyModifier.shift}),

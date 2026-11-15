@@ -1,0 +1,206 @@
+Interface language|Język interfejsu|界面语言|表示言語|Oberflächensprache|Idioma de la interfaz|Мова інтерфейсу|Idioma da interface|Langue de l’interface|Язык интерфейса
+Speech models|Modele mowy|语音模型|音声モデル|Sprachmodelle|Modelos de voz|Моделі мовлення|Modelos de voz|Modèles vocaux|Речевые модели
+Privacy & storage|Prywatność i pamięć|隐私与存储|プライバシーと保存|Datenschutz und Speicher|Privacidad y almacenamiento|Приватність і сховище|Privacidade e armazenamento|Confidentialité et stockage|Конфиденциальность и хранение
+Capture & annotate|Przechwytywanie i adnotacje|截图与标注|キャプチャと注釈|Aufnahme und Anmerkungen|Captura y anotación|Знімки й анотації|Captura e anotação|Capture et annotation|Снимки и аннотации
+Voice filter|Filtr głosu|声音过滤|音声フィルター|Stimmfilter|Filtro de voz|Фільтр голосу|Filtro de voz|Filtre vocal|Голосовой фильтр
+Story browser|Przeglądarka scen|界面场景浏览器|シーンブラウザー|Szenenbrowser|Explorador de escenas|Переглядач сцен|Navegador de cenas|Explorateur de scènes|Обозреватель сцен
+Browser-tab naming|Nazwy z kart przeglądarki|浏览器标签页命名|ブラウザーのタブ名|Namen aus Browser-Tabs|Nombres de pestañas del navegador|Назви з вкладок браузера|Nomes das abas do navegador|Noms des onglets du navigateur|Названия вкладок браузера
+Browser Automation fallback|Automatyzacja przeglądarki|浏览器自动化备用方式|ブラウザー自動操作の代替手段|Browser-Automation als Ersatz|Alternativa con automatización del navegador|Резервна автоматизація браузера|Alternativa com automação do navegador|Recours à l’automatisation du navigateur|Резервная автоматизация браузера
+Diagnostics|Diagnostyka|诊断|診断|Diagnose|Diagnóstico|Діагностика|Diagnóstico|Diagnostic|Диагностика
+Preview only|Tylko podgląd|仅预览|プレビューのみ|Nur Vorschau|Solo vista previa|Лише перегляд|Somente prévia|Aperçu uniquement|Только предпросмотр
+Find a story|Znajdź scenę|查找场景|シーンを検索|Szene suchen|Buscar una escena|Знайти сцену|Buscar uma cena|Rechercher une scène|Найти сцену
+Find settings|Znajdź ustawienia|查找设置|設定を検索|Einstellungen suchen|Buscar ajustes|Знайти налаштування|Buscar configurações|Rechercher un réglage|Найти настройку
+No matching stories|Brak pasujących scen|没有匹配的场景|一致するシーンがありません|Keine passenden Szenen|No hay escenas coincidentes|Відповідних сцен немає|Nenhuma cena encontrada|Aucune scène correspondante|Подходящих сцен нет
+No matching settings|Brak pasujących ustawień|没有匹配的设置|一致する設定がありません|Keine passenden Einstellungen|No hay ajustes coincidentes|Відповідних налаштувань немає|Nenhuma configuração encontrada|Aucun réglage correspondant|Подходящих настроек нет
+Reset preview|Resetuj podgląd|重置预览|プレビューをリセット|Vorschau zurücksetzen|Restablecer vista previa|Скинути перегляд|Redefinir prévia|Réinitialiser l’aperçu|Сбросить предпросмотр
+Copy story link|Kopiuj link do sceny|复制场景链接|シーンのリンクをコピー|Szenenlink kopieren|Copiar enlace de la escena|Копіювати посилання на сцену|Copiar link da cena|Copier le lien de la scène|Скопировать ссылку на сцену
+Story link copied|Skopiowano link do sceny|已复制场景链接|シーンのリンクをコピーしました|Szenenlink kopiert|Enlace de la escena copiado|Посилання на сцену скопійовано|Link da cena copiado|Lien de la scène copié|Ссылка на сцену скопирована
+Compact|Kompaktowy|紧凑|コンパクト|Kompakt|Compacto|Компактний|Compacto|Compact|Компактный
+Indicators|Wskaźniki|指示器|インジケーター|Anzeigen|Indicadores|Індикатори|Indicadores|Indicateurs|Индикаторы
+Shortcuts|Skróty|快捷键|ショートカット|Tastenkürzel|Atajos|Скорочення|Atalhos|Raccourcis|Сочетания клавиш
+Onboarding|Pierwsze kroki|入门设置|初期設定|Erste Schritte|Primeros pasos|Початок роботи|Primeiros passos|Premiers pas|Начало работы
+Grammar cleanup|Korekta gramatyki|语法润色|文法の修正|Grammatikkorrektur|Corrección gramatical|Виправлення граматики|Correção gramatical|Correction grammaticale|Исправление грамматики
+Failure notice|Komunikat o błędzie|错误提示|エラー通知|Fehlermeldung|Aviso de error|Повідомлення про помилку|Aviso de erro|Avis d’erreur|Уведомление об ошибке
+Missing permissions|Brak uprawnień|缺少权限|権限がありません|Fehlende Berechtigungen|Faltan permisos|Бракує дозволів|Permissões ausentes|Autorisations manquantes|Нет разрешений
+Microphone unavailable|Mikrofon niedostępny|麦克风不可用|マイクを利用できません|Mikrofon nicht verfügbar|Micrófono no disponible|Мікрофон недоступний|Microfone indisponível|Microphone indisponible|Микрофон недоступен
+Memory|Pamięć|内存|メモリ|Arbeitsspeicher|Memoria|Пам’ять|Memória|Mémoire|Память
+Shortcut conflict|Konflikt skrótów|快捷键冲突|ショートカットの競合|Tastenkürzelkonflikt|Conflicto de atajos|Конфлікт скорочень|Conflito de atalhos|Conflit de raccourcis|Конфликт сочетаний
+Shortcut saved|Zapisano skrót|已保存快捷键|ショートカットを保存しました|Tastenkürzel gespeichert|Atajo guardado|Скорочення збережено|Atalho salvo|Raccourci enregistré|Сочетание сохранено
+Model picker|Wybór modelu|模型选择器|モデルの選択|Modellauswahl|Selector de modelos|Вибір моделі|Seletor de modelos|Sélecteur de modèles|Выбор модели
+Downloaded models|Pobrane modele|已下载模型|ダウンロード済みモデル|Heruntergeladene Modelle|Modelos descargados|Завантажені моделі|Modelos baixados|Modèles téléchargés|Скачанные модели
+Custom model|Własny model|自定义模型|カスタムモデル|Eigenes Modell|Modelo personalizado|Власна модель|Modelo personalizado|Modèle personnalisé|Своя модель
+Pipeline steps|Kroki przetwarzania|处理步骤|処理ステップ|Verarbeitungsschritte|Pasos de procesamiento|Кроки обробки|Etapas de processamento|Étapes de traitement|Этапы обработки
+Empty pipeline|Brak kroków|空处理流程|空の処理フロー|Leerer Ablauf|Flujo vacío|Порожній процес|Fluxo vazio|Traitement vide|Пустой процесс
+Per-app rule|Reguła aplikacji|应用专属规则|アプリごとのルール|App-Regel|Regla por aplicación|Правило для програми|Regra por aplicativo|Règle par application|Правило приложения
+Output preview|Podgląd wyniku|输出预览|出力プレビュー|Ausgabevorschau|Vista previa de salida|Перегляд результату|Prévia da saída|Aperçu du résultat|Предпросмотр результата
+Provider unavailable|Dostawca niedostępny|服务提供方不可用|プロバイダーを利用できません|Anbieter nicht verfügbar|Proveedor no disponible|Постачальник недоступний|Provedor indisponível|Fournisseur indisponible|Провайдер недоступен
+Welcome to AuraScribe|Witamy w AuraScribe|欢迎使用 AuraScribe|AuraScribe へようこそ|Willkommen bei AuraScribe|Bienvenido a AuraScribe|Вітаємо в AuraScribe|Bem-vindo ao AuraScribe|Bienvenue dans AuraScribe|Добро пожаловать в AuraScribe
+Ready to dictate|Gotowe do dyktowania|可以开始听写|音声入力の準備完了|Bereit zum Diktieren|Listo para dictar|Готово до диктування|Pronto para ditar|Prêt à dicter|Готово к диктовке
+Try dictation|Wypróbuj dyktowanie|试用听写|音声入力を試す|Diktieren ausprobieren|Probar dictado|Спробувати диктування|Experimentar ditado|Essayer la dictée|Попробовать диктовку
+Stop practice|Zakończ próbę|停止练习|練習を停止|Übung beenden|Detener práctica|Зупинити вправу|Parar prática|Arrêter l’essai|Остановить пробу
+Finish setup|Zakończ konfigurację|完成设置|設定を完了|Einrichtung abschließen|Finalizar configuración|Завершити налаштування|Concluir configuração|Terminer la configuration|Завершить настройку
+Set up later|Skonfiguruj później|稍后设置|後で設定|Später einrichten|Configurar más tarde|Налаштувати пізніше|Configurar depois|Configurer plus tard|Настроить позже
+Saved dictations|Zapisane dyktowania|已保存的听写|保存した音声入力|Gespeicherte Diktate|Dictados guardados|Збережені диктування|Ditados salvos|Dictées enregistrées|Сохранённые диктовки
+Empty history|Pusta historia|历史记录为空|履歴が空です|Leerer Verlauf|Historial vacío|Порожня історія|Histórico vazio|Historique vide|История пуста
+Delete confirmation|Potwierdzenie usunięcia|删除确认|削除の確認|Löschbestätigung|Confirmación de eliminación|Підтвердження видалення|Confirmação de exclusão|Confirmation de suppression|Подтверждение удаления
+Saved meetings|Zapisane spotkania|已保存的会议|保存した会議|Gespeicherte Besprechungen|Reuniones guardadas|Збережені зустрічі|Reuniões salvas|Réunions enregistrées|Сохранённые встречи
+Empty meetings|Brak spotkań|会议为空|会議がありません|Keine Besprechungen|No hay reuniones|Зустрічей немає|Nenhuma reunião|Aucune réunion|Встреч нет
+Interrupted transcription|Przerwana transkrypcja|转写已中断|文字起こしが中断されました|Unterbrochene Transkription|Transcripción interrumpida|Перерване розпізнавання|Transcrição interrompida|Transcription interrompue|Распознавание прервано
+System audio|Dźwięk systemowy|系统音频|システム音声|Systemaudio|Audio del sistema|Системний звук|Áudio do sistema|Audio système|Системный звук
+System audio permission|Dostęp do dźwięku systemowego|系统音频权限|システム音声の権限|Systemaudio-Berechtigung|Permiso de audio del sistema|Дозвіл на системний звук|Permissão de áudio do sistema|Autorisation de l’audio système|Разрешение системного звука
+Annotation tools|Narzędzia adnotacji|标注工具|注釈ツール|Anmerkungswerkzeuge|Herramientas de anotación|Інструменти анотацій|Ferramentas de anotação|Outils d’annotation|Инструменты аннотаций
+Empty captures|Brak zrzutów|没有截图|キャプチャがありません|Keine Aufnahmen|No hay capturas|Знімків немає|Nenhuma captura|Aucune capture|Снимков нет
+Replay buffer|Bufor powtórki|回放缓冲区|リプレイバッファー|Wiedergabepuffer|Búfer de repetición|Буфер повтору|Buffer de replay|Tampon de replay|Буфер повтора
+Virtual microphone unavailable|Mikrofon wirtualny niedostępny|虚拟麦克风不可用|仮想マイクを利用できません|Virtuelles Mikrofon nicht verfügbar|Micrófono virtual no disponible|Віртуальний мікрофон недоступний|Microfone virtual indisponível|Microphone virtuel indisponible|Виртуальный микрофон недоступен
+Update ready|Aktualizacja gotowa|更新已就绪|更新の準備完了|Update bereit|Actualización lista|Оновлення готове|Atualização pronta|Mise à jour prête|Обновление готово
+Update failed|Aktualizacja nie powiodła się|更新失败|更新に失敗しました|Update fehlgeschlagen|Actualización fallida|Помилка оновлення|Falha na atualização|Échec de la mise à jour|Ошибка обновления
+Copy only|Tylko kopiowanie|仅复制|コピーのみ|Nur kopieren|Solo copiar|Лише копіювати|Somente copiar|Copier uniquement|Только копировать
+Dark|Ciemny|深色|ダーク|Dunkel|Oscuro|Темна|Escuro|Sombre|Тёмная
+Follow system|Zgodnie z systemem|跟随系统|システムに従う|Systemeinstellung|Seguir al sistema|Як у системі|Seguir o sistema|Suivre le système|Как в системе
+Add step|Dodaj krok|添加步骤|ステップを追加|Schritt hinzufügen|Añadir paso|Додати крок|Adicionar etapa|Ajouter une étape|Добавить этап
+Preferred spelling|Preferowana pisownia|首选拼写|優先する表記|Bevorzugte Schreibweise|Ortografía preferida|Бажане написання|Grafia preferida|Orthographe préférée|Предпочтительное написание
+Sample text|Przykładowy tekst|示例文本|サンプルテキスト|Beispieltext|Texto de ejemplo|Приклад тексту|Texto de exemplo|Texte d’exemple|Пример текста
+Meeting title|Tytuł spotkania|会议标题|会議タイトル|Besprechungstitel|Título de reunión|Назва зустрічі|Título da reunião|Titre de la réunion|Название встречи
+Stop & save|Zatrzymaj i zapisz|停止并保存|停止して保存|Stoppen und speichern|Detener y guardar|Зупинити й зберегти|Parar e salvar|Arrêter et enregistrer|Остановить и сохранить
+Input gain|Wzmocnienie wejścia|输入增益|入力ゲイン|Eingangsverstärkung|Ganancia de entrada|Підсилення входу|Ganho de entrada|Gain d’entrée|Усиление входа
+Noise gate|Bramka szumów|噪声门|ノイズゲート|Noise Gate|Puerta de ruido|Шумовий шлюз|Gate de ruído|Porte de bruit|Шумовой порог
+Echo cancellation|Usuwanie echa|回声消除|エコー除去|Echounterdrückung|Cancelación de eco|Приглушення відлуння|Cancelamento de eco|Suppression d’écho|Подавление эха
+Automatic gain control|Automatyczne wzmocnienie|自动增益控制|自動ゲイン制御|Automatische Verstärkung|Control automático de ganancia|Автоматичне підсилення|Controle automático de ganho|Contrôle automatique du gain|Автоматическая регулировка усиления
+Current state|Bieżący stan|当前状态|現在の状態|Aktueller Zustand|Estado actual|Поточний стан|Estado atual|État actuel|Текущее состояние
+Project storage|Pamięć projektu|项目存储|プロジェクトの保存先|Projektspeicher|Almacenamiento del proyecto|Сховище проєкту|Armazenamento do projeto|Stockage du projet|Хранилище проекта
+Project model storage|Modele w projekcie|项目模型存储|プロジェクトのモデル保存先|Modellspeicher im Projekt|Modelos del proyecto|Моделі проєкту|Modelos do projeto|Modèles du projet|Модели проекта
+Access token|Token dostępu|访问令牌|アクセストークン|Zugriffstoken|Token de acceso|Токен доступу|Token de acesso|Jeton d’accès|Токен доступа
+Hugging Face token|Token Hugging Face|Hugging Face 令牌|Hugging Face トークン|Hugging-Face-Token|Token de Hugging Face|Токен Hugging Face|Token do Hugging Face|Jeton Hugging Face|Токен Hugging Face
+Save token|Zapisz token|保存令牌|トークンを保存|Token speichern|Guardar token|Зберегти токен|Salvar token|Enregistrer le jeton|Сохранить токен
+Save vocabulary|Zapisz słownictwo|保存词汇|単語を保存|Wortschatz speichern|Guardar vocabulario|Зберегти словник|Salvar vocabulário|Enregistrer le vocabulaire|Сохранить словарь
+Vocabulary saved|Zapisano słownictwo|词汇已保存|単語を保存しました|Wortschatz gespeichert|Vocabulario guardado|Словник збережено|Vocabulário salvo|Vocabulaire enregistré|Словарь сохранён
+Replacements|Zamiany|替换规则|置換ルール|Ersetzungen|Sustituciones|Заміни|Substituições|Remplacements|Замены
+Recognition vocabulary|Słownictwo rozpoznawania|识别词汇|認識用の単語|Erkennungswortschatz|Vocabulario de reconocimiento|Словник розпізнавання|Vocabulário de reconhecimento|Vocabulaire de reconnaissance|Словарь распознавания
+Vocabulary replacements|Zamiany słownictwa|词汇替换|単語の置換|Wortersetzungen|Sustituciones de vocabulario|Заміни слів|Substituições de vocabulário|Remplacements de vocabulaire|Замены слов
+Keep history|Zachowuj historię|保留历史记录|履歴を保存|Verlauf behalten|Conservar historial|Зберігати історію|Manter histórico|Conserver l’historique|Сохранять историю
+Save dictation history|Zapisuj historię dyktowania|保存听写历史|音声入力の履歴を保存|Diktatverlauf speichern|Guardar historial de dictado|Зберігати історію диктування|Salvar histórico de ditado|Enregistrer l’historique des dictées|Сохранять историю диктовки
+Search transcripts|Szukaj transkrypcji|搜索转写|文字起こしを検索|Transkripte suchen|Buscar transcripciones|Шукати розшифрування|Buscar transcrições|Rechercher des transcriptions|Искать расшифровки
+No matching transcripts|Brak pasujących transkrypcji|没有匹配的转写|一致する文字起こしがありません|Keine passenden Transkripte|No hay transcripciones coincidentes|Відповідних розшифрувань немає|Nenhuma transcrição encontrada|Aucune transcription correspondante|Подходящих расшифровок нет
+Your dictations will appear here|Twoje dyktowania pojawią się tutaj|您的听写将显示在这里|音声入力がここに表示されます|Hier erscheinen deine Diktate|Tus dictados aparecerán aquí|Ваші диктування з’являться тут|Seus ditados aparecerão aqui|Vos dictées apparaîtront ici|Здесь появятся ваши диктовки
+Edit transcript|Edytuj transkrypcję|编辑转写|文字起こしを編集|Transkript bearbeiten|Editar transcripción|Редагувати розшифрування|Editar transcrição|Modifier la transcription|Изменить расшифровку
+Play recording|Odtwórz nagranie|播放录音|録音を再生|Aufnahme abspielen|Reproducir grabación|Відтворити запис|Reproduzir gravação|Lire l’enregistrement|Воспроизвести запись
+Stop playback|Zatrzymaj odtwarzanie|停止播放|再生を停止|Wiedergabe stoppen|Detener reproducción|Зупинити відтворення|Parar reprodução|Arrêter la lecture|Остановить воспроизведение
+Try output|Wypróbuj wynik|试用输出|出力を試す|Ausgabe ausprobieren|Probar salida|Спробувати результат|Testar saída|Essayer le résultat|Проверить результат
+Fix a word or phrase|Popraw słowo lub frazę|修正单词或短语|単語やフレーズを修正|Wort oder Ausdruck korrigieren|Corregir palabra o frase|Виправити слово чи фразу|Corrigir palavra ou frase|Corriger un mot ou une expression|Исправить слово или фразу
+Wrong word or phrase|Błędne słowo lub fraza|错误的单词或短语|誤った単語やフレーズ|Falsches Wort oder Ausdruck|Palabra o frase incorrecta|Неправильне слово чи фраза|Palavra ou frase incorreta|Mot ou expression incorrecte|Неверное слово или фраза
+Save correction|Zapisz poprawkę|保存修正|修正を保存|Korrektur speichern|Guardar corrección|Зберегти виправлення|Salvar correção|Enregistrer la correction|Сохранить исправление
+Personal commands|Własne polecenia|个人命令|個人用コマンド|Eigene Befehle|Comandos personales|Особисті команди|Comandos pessoais|Commandes personnelles|Личные команды
+Personal command|Własne polecenie|个人命令|個人用コマンド|Eigener Befehl|Comando personal|Особиста команда|Comando pessoal|Commande personnelle|Личная команда
+Add personal command|Dodaj polecenie|添加个人命令|個人用コマンドを追加|Eigenen Befehl hinzufügen|Añadir comando personal|Додати особисту команду|Adicionar comando pessoal|Ajouter une commande personnelle|Добавить личную команду
+Save command|Zapisz polecenie|保存命令|コマンドを保存|Befehl speichern|Guardar comando|Зберегти команду|Salvar comando|Enregistrer la commande|Сохранить команду
+Instruction|Instrukcja|指令|指示|Anweisung|Instrucción|Інструкція|Instrução|Instruction|Инструкция
+Custom instruction|Własna instrukcja|自定义指令|カスタム指示|Eigene Anweisung|Instrucción personalizada|Власна інструкція|Instrução personalizada|Instruction personnalisée|Своя инструкция
+Apply instruction|Zastosuj instrukcję|应用指令|指示を適用|Anweisung anwenden|Aplicar instrucción|Застосувати інструкцію|Aplicar instrução|Appliquer l’instruction|Применить инструкцию
+Processing selected text…|Przetwarzanie zaznaczonego tekstu…|正在处理所选文本…|選択したテキストを処理中…|Ausgewählten Text verarbeiten…|Procesando texto seleccionado…|Обробка вибраного тексту…|Processando texto selecionado…|Traitement du texte sélectionné…|Обработка выделенного текста…
+Output pipeline|Przetwarzanie wyniku|输出处理流程|出力処理フロー|Ausgabeverarbeitung|Flujo de salida|Обробка результату|Fluxo de saída|Traitement du résultat|Обработка результата
+Output step|Krok przetwarzania|输出步骤|出力ステップ|Ausgabeschritt|Paso de salida|Крок обробки|Etapa de saída|Étape de sortie|Этап вывода
+Add application pipeline|Dodaj przetwarzanie dla aplikacji|添加应用处理流程|アプリの処理フローを追加|App-Verarbeitung hinzufügen|Añadir flujo de aplicación|Додати обробку для програми|Adicionar fluxo do aplicativo|Ajouter un traitement par application|Добавить обработку приложения
+Save pipeline|Zapisz przetwarzanie|保存处理流程|処理フローを保存|Ablauf speichern|Guardar flujo|Зберегти процес|Salvar fluxo|Enregistrer le traitement|Сохранить процесс
+Include the default pipeline|Uwzględnij domyślne przetwarzanie|包含默认处理流程|標準の処理フローを含める|Standardablauf einbeziehen|Incluir flujo predeterminado|Додати типовий процес|Incluir fluxo padrão|Inclure le traitement par défaut|Включить стандартный процесс
+Application bundle ID|Identyfikator pakietu aplikacji|应用包标识符|アプリのバンドル ID|App-Bundle-ID|ID del paquete de aplicación|Ідентифікатор пакета програми|ID do pacote do aplicativo|Identifiant de l’application|Идентификатор пакета приложения
+Default • every app|Domyślne • wszystkie aplikacje|默认 • 所有应用|標準 • すべてのアプリ|Standard • alle Apps|Predeterminado • todas las apps|Типово • усі програми|Padrão • todos os aplicativos|Par défaut • toutes les apps|По умолчанию • все приложения
+Follow current model|Użyj bieżącego modelu|跟随当前模型|現在のモデルに従う|Aktuellem Modell folgen|Seguir modelo actual|Використовувати поточну модель|Seguir modelo atual|Suivre le modèle actuel|Использовать текущую модель
+Language code|Kod języka|语言代码|言語コード|Sprachcode|Código de idioma|Код мови|Código do idioma|Code de langue|Код языка
+Keep current model|Zachowaj bieżący model|保留当前模型|現在のモデルを維持|Aktuelles Modell behalten|Mantener modelo actual|Залишити поточну модель|Manter modelo atual|Conserver le modèle actuel|Оставить текущую модель
+Download & load|Pobierz i załaduj|下载并加载|ダウンロードして読み込む|Herunterladen und laden|Descargar y cargar|Завантажити й активувати|Baixar e carregar|Télécharger et charger|Скачать и загрузить
+Unload models|Zwolnij modele|卸载内存中的模型|モデルをメモリから解放|Modelle entladen|Descargar modelos de memoria|Вивантажити моделі|Descarregar modelos da memória|Décharger les modèles|Выгрузить модели
+Loaded and ready|Załadowany i gotowy|已加载并就绪|読み込み完了|Geladen und bereit|Cargado y listo|Завантажено й готово|Carregado e pronto|Chargé et prêt|Загружено и готово
+Preload speech model|Wczytaj model przy starcie|预加载语音模型|音声モデルを事前読み込み|Sprachmodell vorladen|Precargar modelo de voz|Попередньо завантажити модель|Pré-carregar modelo de voz|Précharger le modèle vocal|Предзагрузить речевую модель
+Remove downloaded models & caches|Usuń modele i pamięć podręczną|删除模型与缓存|モデルとキャッシュを削除|Modelle und Caches entfernen|Eliminar modelos y cachés|Видалити моделі й кеш|Remover modelos e caches|Supprimer modèles et caches|Удалить модели и кеш
+Filter speech models|Filtruj modele mowy|筛选语音模型|音声モデルを絞り込む|Sprachmodelle filtern|Filtrar modelos de voz|Фільтрувати моделі|Filtrar modelos de voz|Filtrer les modèles vocaux|Фильтровать речевые модели
+Active first|Aktywny na początku|当前模型优先|使用中のモデルを先頭に|Aktives zuerst|Activo primero|Активна спочатку|Ativo primeiro|Actif en premier|Активная первой
+Smallest first|Najmniejsze najpierw|最小优先|小さい順|Kleinste zuerst|Más pequeños primero|Найменші спочатку|Menores primeiro|Plus petits en premier|Меньшие первыми
+Catalog or imported model|Katalog lub własny model|目录或导入的模型|カタログまたは取り込みモデル|Katalog oder importiertes Modell|Catálogo o modelo importado|Каталог або імпортована модель|Catálogo ou modelo importado|Catalogue ou modèle importé|Каталог или импортированная модель
+Import GGUF speech model|Importuj model mowy GGUF|导入 GGUF 语音模型|GGUF 音声モデルを取り込む|GGUF-Sprachmodell importieren|Importar modelo de voz GGUF|Імпортувати модель GGUF|Importar modelo de voz GGUF|Importer un modèle vocal GGUF|Импортировать речевую модель GGUF
+Reference an existing project model|Użyj istniejącego modelu projektu|引用现有项目模型|既存のプロジェクトモデルを参照|Vorhandenes Projektmodell nutzen|Usar modelo existente del proyecto|Використати наявну модель проєкту|Usar modelo existente do projeto|Utiliser un modèle existant du projet|Использовать имеющуюся модель проекта
+Your model benchmarks|Twoje pomiary modeli|您的模型基准测试|モデルの測定結果|Deine Modellmessungen|Tus pruebas de modelos|Ваші вимірювання моделей|Seus testes de modelos|Vos mesures de modèles|Ваши измерения моделей
+Benchmark selected model|Zmierz wybrany model|测试所选模型|選択したモデルを測定|Ausgewähltes Modell messen|Evaluar modelo seleccionado|Виміряти вибрану модель|Avaliar modelo selecionado|Mesurer le modèle sélectionné|Измерить выбранную модель
+Newer candidates|Nowsze modele|新候选模型|新しい候補モデル|Neuere Kandidaten|Candidatos más recientes|Новіші кандидати|Candidatos mais recentes|Modèles plus récents|Новые кандидаты
+Model research|Badanie modeli|模型研究|モデルの調査|Modellrecherche|Investigación de modelos|Дослідження моделей|Pesquisa de modelos|Recherche de modèles|Исследование моделей
+Pause dictation shortcuts|Wstrzymaj skróty dyktowania|暂停听写快捷键|音声入力のショートカットを一時停止|Diktierkürzel pausieren|Pausar atajos de dictado|Призупинити скорочення диктування|Pausar atalhos de ditado|Suspendre les raccourcis de dictée|Приостановить сочетания диктовки
+Resume dictation shortcuts|Wznów skróty dyktowania|恢复听写快捷键|音声入力のショートカットを再開|Diktierkürzel fortsetzen|Reanudar atajos de dictado|Відновити скорочення диктування|Retomar atalhos de ditado|Réactiver les raccourcis de dictée|Возобновить сочетания диктовки
+Stop background audio|Zatrzymaj dźwięk w tle|停止后台音频|バックグラウンド音声を停止|Hintergrundaudio stoppen|Detener audio en segundo plano|Зупинити фоновий звук|Parar áudio em segundo plano|Arrêter l’audio en arrière-plan|Остановить фоновый звук
+Stop dictation|Zatrzymaj dyktowanie|停止听写|音声入力を停止|Diktat stoppen|Detener dictado|Зупинити диктування|Parar ditado|Arrêter la dictée|Остановить диктовку
+Stop meeting|Zatrzymaj spotkanie|停止会议录音|会議の録音を停止|Besprechung stoppen|Detener reunión|Зупинити зустріч|Parar reunião|Arrêter la réunion|Остановить встречу
+Stop voice filter|Zatrzymaj filtr głosu|停止声音过滤|音声フィルターを停止|Stimmfilter stoppen|Detener filtro de voz|Зупинити фільтр голосу|Parar filtro de voz|Arrêter le filtre vocal|Остановить голосовой фильтр
+About AuraScribe|O AuraScribe|关于 AuraScribe|AuraScribe について|Über AuraScribe|Acerca de AuraScribe|Про AuraScribe|Sobre o AuraScribe|À propos d’AuraScribe|Об AuraScribe
+Dictation mode|Tryb dyktowania|听写模式|音声入力モード|Diktiermodus|Modo de dictado|Режим диктування|Modo de ditado|Mode de dictée|Режим диктовки
+Finish, then insert|Zakończ, potem wstaw|完成后插入|終了してから挿入|Beenden, dann einfügen|Finalizar y después insertar|Завершити, потім вставити|Concluir e depois inserir|Terminer puis insérer|Завершить, затем вставить
+Other audio while dictating|Inny dźwięk podczas dyktowania|听写期间的其他音频|音声入力中の他の音声|Andere Audios beim Diktieren|Otro audio durante el dictado|Інший звук під час диктування|Outro áudio durante o ditado|Autre audio pendant la dictée|Другой звук во время диктовки
+Lower volume|Zmniejsz głośność|降低音量|音量を下げる|Lautstärke senken|Bajar volumen|Зменшити гучність|Reduzir volume|Baisser le volume|Уменьшить громкость
+Leave unchanged|Bez zmian|保持不变|変更しない|Unverändert lassen|Sin cambios|Без змін|Sem alterações|Ne pas modifier|Не менять
+Indicator position|Pozycja wskaźnika|指示器位置|インジケーターの位置|Anzeigeposition|Posición del indicador|Положення індикатора|Posição do indicador|Position de l’indicateur|Положение индикатора
+Top of screen|Góra ekranu|屏幕顶部|画面上部|Oben am Bildschirm|Parte superior de la pantalla|Угорі екрана|Parte superior da tela|Haut de l’écran|Вверху экрана
+Bottom of screen|Dół ekranu|屏幕底部|画面下部|Unten am Bildschirm|Parte inferior de la pantalla|Унизу екрана|Parte inferior da tela|Bas de l’écran|Внизу экрана
+Global shortcuts|Skróty globalne|全局快捷键|グローバルショートカット|Globale Tastenkürzel|Atajos globales|Глобальні скорочення|Atalhos globais|Raccourcis globaux|Глобальные сочетания
+Custom shortcut|Własny skrót|自定义快捷键|カスタムショートカット|Eigenes Tastenkürzel|Atajo personalizado|Власне скорочення|Atalho personalizado|Raccourci personnalisé|Своё сочетание
+Shortcut behavior|Działanie skrótu|快捷键行为|ショートカットの動作|Tastenkürzelverhalten|Comportamiento del atajo|Дія скорочення|Comportamento do atalho|Comportement du raccourci|Поведение сочетания
+Mouse dictation shortcut|Skrót myszy do dyktowania|鼠标听写快捷键|マウスの音声入力ボタン|Mauskürzel zum Diktieren|Atajo de ratón para dictado|Кнопка миші для диктування|Atalho do mouse para ditado|Raccourci souris de dictée|Кнопка мыши для диктовки
+Middle button|Środkowy przycisk|中键|中央ボタン|Mittlere Taste|Botón central|Середня кнопка|Botão do meio|Bouton du milieu|Средняя кнопка
+Recording limits|Limity nagrywania|录音限制|録音の制限|Aufnahmegrenzen|Límites de grabación|Обмеження запису|Limites de gravação|Limites d’enregistrement|Ограничения записи
+Silence duration|Czas ciszy|静音时长|無音の長さ|Stilledauer|Duración del silencio|Тривалість тиші|Duração do silêncio|Durée du silence|Длительность тишины
+Silence threshold|Próg ciszy|静音阈值|無音のしきい値|Stille-Schwellenwert|Umbral de silencio|Поріг тиші|Limiar de silêncio|Seuil de silence|Порог тишины
+Maximum recording|Maksymalny czas nagrania|最长录音|録音時間の上限|Maximale Aufnahmezeit|Grabación máxima|Максимальна тривалість запису|Gravação máxima|Durée maximale d’enregistrement|Максимальная длительность записи
+Stop after silence|Zatrzymaj po ciszy|静音后停止|無音後に停止|Nach Stille stoppen|Detener tras silencio|Зупиняти після тиші|Parar após silêncio|Arrêter après un silence|Останавливать после тишины
+Restore clipboard after paste|Przywróć schowek po wklejeniu|粘贴后恢复剪贴板|貼り付け後にクリップボードを復元|Zwischenablage nach Einfügen wiederherstellen|Restaurar portapapeles tras pegar|Відновлювати буфер після вставлення|Restaurar área de transferência após colar|Restaurer le presse-papiers après collage|Восстанавливать буфер после вставки
+Clipboard fallback notice|Powiadomienie o użyciu schowka|剪贴板备用方式提示|クリップボード代替の通知|Hinweis auf Zwischenablage-Ersatz|Aviso de uso del portapapeles|Сповіщення про резервний буфер|Aviso de uso da área de transferência|Avis de recours au presse-papiers|Уведомление об использовании буфера
+Paste behavior|Zachowanie wklejania|粘贴行为|貼り付け動作|Einfügeverhalten|Comportamiento de pegado|Поведінка вставлення|Comportamento ao colar|Comportement du collage|Поведение вставки
+Per-application processing|Przetwarzanie według aplikacji|按应用处理|アプリごとの処理|App-spezifische Verarbeitung|Procesamiento por aplicación|Обробка для окремих програм|Processamento por aplicativo|Traitement par application|Обработка по приложениям
+Keyboard input switching|Przełączanie według języka klawiatury|键盘输入源切换|キーボード入力ソース連動|Wechsel nach Tastatureingabe|Cambio según entrada de teclado|Перемикання за розкладкою|Alternância por entrada do teclado|Changement selon la saisie clavier|Переключение по раскладке
+Keyboard navigation|Nawigacja klawiaturą|键盘导航|キーボード操作|Tastaturnavigation|Navegación con teclado|Навігація клавіатурою|Navegação por teclado|Navigation au clavier|Навигация с клавиатуры
+Sound & readiness|Dźwięki i gotowość|声音与就绪状态|音と準備状態|Ton und Bereitschaft|Sonido y disponibilidad|Звук і готовність|Som e prontidão|Sons et disponibilité|Звук и готовность
+Start & stop sounds|Dźwięki startu i zatrzymania|开始与停止提示音|開始音と停止音|Start- und Stopptöne|Sonidos de inicio y fin|Звуки початку й завершення|Sons de início e parada|Sons de début et de fin|Звуки начала и остановки
+Preview sounds|Odsłuchaj dźwięki|试听提示音|音を試聴|Töne anhören|Escuchar sonidos|Прослухати звуки|Ouvir sons|Écouter les sons|Прослушать звуки
+Silent|Bez dźwięku|静音|無音|Lautlos|Silencioso|Без звуку|Silencioso|Silencieux|Без звука
+Release after|Zwolnij po|释放时间|解放までの時間|Freigeben nach|Liberar después de|Звільняти через|Liberar após|Libérer après|Освобождать через
+Capture region|Przechwyć obszar|截取区域|範囲をキャプチャ|Bereich aufnehmen|Capturar región|Зняти область|Capturar região|Capturer une zone|Снять область
+Capture window|Przechwyć okno|截取窗口|ウィンドウをキャプチャ|Fenster aufnehmen|Capturar ventana|Зняти вікно|Capturar janela|Capturer une fenêtre|Снять окно
+Capture notes|Notatki do zrzutu|截图笔记|キャプチャのメモ|Aufnahmenotizen|Notas de captura|Нотатки до знімка|Notas da captura|Notes de capture|Заметки к снимку
+Annotation text|Tekst adnotacji|标注文本|注釈テキスト|Anmerkungstext|Texto de anotación|Текст анотації|Texto da anotação|Texte d’annotation|Текст аннотации
+Dictate note|Podyktuj notatkę|口述笔记|メモを音声入力|Notiz diktieren|Dictar nota|Надиктувати нотатку|Ditar nota|Dicter une note|Надиктовать заметку
+Undo stroke|Cofnij kreskę|撤销笔画|描画を元に戻す|Strich rückgängig|Deshacer trazo|Скасувати штрих|Desfazer traço|Annuler le trait|Отменить штрих
+Copy image|Kopiuj obraz|复制图像|画像をコピー|Bild kopieren|Copiar imagen|Копіювати зображення|Copiar imagem|Copier l’image|Копировать изображение
+Export annotated PNG|Eksportuj PNG z adnotacjami|导出标注 PNG|注釈付き PNG を書き出す|PNG mit Anmerkungen exportieren|Exportar PNG anotado|Експортувати PNG з анотаціями|Exportar PNG anotado|Exporter le PNG annoté|Экспортировать PNG с аннотациями
+Extract text (OCR)|Rozpoznaj tekst (OCR)|提取文字（OCR）|テキストを抽出（OCR）|Text erkennen (OCR)|Extraer texto (OCR)|Розпізнати текст (OCR)|Extrair texto (OCR)|Extraire le texte (OCR)|Распознать текст (OCR)
+Select a capture|Wybierz zrzut|选择截图|キャプチャを選択|Aufnahme auswählen|Seleccionar captura|Вибрати знімок|Selecionar captura|Sélectionner une capture|Выбрать снимок
+Screen permission|Dostęp do ekranu|屏幕权限|画面の権限|Bildschirmberechtigung|Permiso de pantalla|Дозвіл на екран|Permissão de tela|Autorisation d’écran|Разрешение экрана
+Stop screen recording|Zatrzymaj nagrywanie ekranu|停止屏幕录制|画面録画を停止|Bildschirmaufnahme stoppen|Detener grabación de pantalla|Зупинити запис екрана|Parar gravação de tela|Arrêter l’enregistrement d’écran|Остановить запись экрана
+Save last 15 seconds|Zapisz ostatnie 15 sekund|保存最近 15 秒|直前の15秒を保存|Letzte 15 Sekunden speichern|Guardar últimos 15 segundos|Зберегти останні 15 секунд|Salvar últimos 15 segundos|Enregistrer les 15 dernières secondes|Сохранить последние 15 секунд
+Reveal saved screen recording|Pokaż zapisane nagranie ekranu|显示已保存的屏幕录制|保存した画面録画を表示|Gespeicherte Bildschirmaufnahme zeigen|Mostrar grabación guardada|Показати збережений запис екрана|Mostrar gravação de tela salva|Afficher l’enregistrement d’écran|Показать сохранённую запись экрана
+Move old meetings to Trash|Przenieś stare spotkania do Kosza|将旧会议移到废纸篓|古い会議をゴミ箱に移動|Alte Besprechungen in Papierkorb|Mover reuniones antiguas a la papelera|Переміщувати старі зустрічі в кошик|Mover reuniões antigas para a lixeira|Mettre les anciennes réunions à la corbeille|Перемещать старые встречи в корзину
+Expire audio after transcription|Usuń dźwięk po transkrypcji|转写后让音频过期|文字起こし後に音声を削除|Audio nach Transkription löschen|Eliminar audio tras transcribir|Видаляти звук після розшифрування|Excluir áudio após transcrição|Supprimer l’audio après transcription|Удалять звук после расшифровки
+Identify remote speakers|Rozróżniaj zdalnych rozmówców|区分远端说话人|リモート話者を区別|Entfernte Sprecher unterscheiden|Distinguir hablantes remotos|Розрізняти віддалених мовців|Distinguir falantes remotos|Distinguer les intervenants distants|Различать удалённых говорящих
+Generate notes|Utwórz notatki|生成笔记|ノートを作成|Notizen erstellen|Generar notas|Створити нотатки|Gerar notas|Générer des notes|Создать заметки
+Meeting names and summaries|Nazwy i podsumowania spotkań|会议名称与摘要|会議名と要約|Besprechungsnamen und Zusammenfassungen|Nombres y resúmenes de reuniones|Назви й підсумки зустрічей|Nomes e resumos de reuniões|Noms et résumés des réunions|Названия и сводки встреч
+Resume transcription|Wznów transkrypcję|继续转写|文字起こしを再開|Transkription fortsetzen|Reanudar transcripción|Відновити розшифрування|Retomar transcrição|Reprendre la transcription|Возобновить расшифровку
+Stop after current step|Zatrzymaj po bieżącym kroku|当前步骤后停止|現在のステップ後に停止|Nach aktuellem Schritt stoppen|Detener tras el paso actual|Зупинити після поточного кроку|Parar após a etapa atual|Arrêter après l’étape actuelle|Остановить после текущего этапа
+Rename meeting|Zmień nazwę spotkania|重命名会议|会議名を変更|Besprechung umbenennen|Renombrar reunión|Перейменувати зустріч|Renomear reunião|Renommer la réunion|Переименовать встречу
+Open installer|Otwórz instalator|打开安装程序|インストーラーを開く|Installationsprogramm öffnen|Abrir instalador|Відкрити інсталятор|Abrir instalador|Ouvrir l’installateur|Открыть установщик
+Refresh driver status|Odśwież stan sterownika|刷新驱动状态|ドライバーの状態を更新|Treiberstatus aktualisieren|Actualizar estado del controlador|Оновити стан драйвера|Atualizar estado do driver|Actualiser l’état du pilote|Обновить состояние драйвера
+Installed and detected|Zainstalowany i wykryty|已安装并检测到|インストール済み・検出済み|Installiert und erkannt|Instalado y detectado|Встановлено й виявлено|Instalado e detectado|Installé et détecté|Установлен и обнаружен
+Physical input microphone|Fizyczny mikrofon wejściowy|物理输入麦克风|入力用の物理マイク|Physisches Eingangsmikrofon|Micrófono físico de entrada|Фізичний вхідний мікрофон|Microfone físico de entrada|Microphone physique d’entrée|Физический входной микрофон
+Monitor processed audio|Odsłuch przetworzonego dźwięku|监听处理后的音频|処理済み音声をモニター|Verarbeitetes Audio abhören|Escuchar audio procesado|Прослуховувати оброблений звук|Monitorar áudio processado|Écouter l’audio traité|Прослушивать обработанный звук
+Try audio preview|Wypróbuj odsłuch|试听音频|音声プレビューを試す|Audiovorschau testen|Probar vista previa de audio|Спробувати прослуховування|Testar prévia de áudio|Essayer l’aperçu audio|Проверить предпрослушивание
+Start virtual microphone|Uruchom mikrofon wirtualny|启动虚拟麦克风|仮想マイクを開始|Virtuelles Mikrofon starten|Iniciar micrófono virtual|Запустити віртуальний мікрофон|Iniciar microfone virtual|Démarrer le microphone virtuel|Запустить виртуальный микрофон
+Check for updates automatically|Automatycznie sprawdzaj aktualizacje|自动检查更新|更新を自動確認|Automatisch nach Updates suchen|Buscar actualizaciones automáticamente|Автоматично перевіряти оновлення|Buscar atualizações automaticamente|Rechercher les mises à jour automatiquement|Автоматически проверять обновления
+Download updates automatically|Automatycznie pobieraj aktualizacje|自动下载更新|更新を自動ダウンロード|Updates automatisch laden|Descargar actualizaciones automáticamente|Автоматично завантажувати оновлення|Baixar atualizações automaticamente|Télécharger les mises à jour automatiquement|Автоматически скачивать обновления
+Install updates when idle|Instaluj aktualizacje w bezczynności|空闲时安装更新|待機中に更新をインストール|Updates im Leerlauf installieren|Instalar actualizaciones en reposo|Встановлювати оновлення в простої|Instalar atualizações quando ocioso|Installer les mises à jour au repos|Устанавливать обновления в простое
+Download verified update|Pobierz zweryfikowaną aktualizację|下载已验证的更新|検証済み更新をダウンロード|Geprüftes Update laden|Descargar actualización verificada|Завантажити перевірене оновлення|Baixar atualização verificada|Télécharger la mise à jour vérifiée|Скачать проверенное обновление
+Install & restart|Zainstaluj i uruchom ponownie|安装并重新启动|インストールして再起動|Installieren und neu starten|Instalar y reiniciar|Встановити й перезапустити|Instalar e reiniciar|Installer et redémarrer|Установить и перезапустить
+Local API and CLI|Lokalne API i CLI|本地 API 和 CLI|ローカル API と CLI|Lokale API und CLI|API y CLI locales|Локальні API та CLI|API e CLI locais|API et CLI locales|Локальные API и CLI
+Pipeline test text|Tekst do testu przetwarzania|处理流程测试文本|処理フローのテスト用テキスト|Testtext für Verarbeitung|Texto de prueba del flujo|Текст для перевірки обробки|Texto de teste do fluxo|Texte de test du traitement|Текст для проверки обработки
+Run pipeline preview|Uruchom podgląd przetwarzania|运行处理流程预览|処理フローをプレビュー|Verarbeitungsvorschau starten|Ejecutar vista previa del flujo|Переглянути обробку|Executar prévia do fluxo|Lancer l’aperçu du traitement|Запустить предпросмотр обработки
+Test insertion after 5 seconds|Testuj wstawianie za 5 sekund|5 秒后测试插入|5秒後に挿入をテスト|Einfügen in 5 Sekunden testen|Probar inserción en 5 segundos|Перевірити вставлення через 5 секунд|Testar inserção em 5 segundos|Tester l’insertion dans 5 secondes|Проверить вставку через 5 секунд
+Click the destination text field now…|Kliknij teraz docelowe pole tekstowe…|现在点击目标文本框…|入力先のテキスト欄をクリック…|Jetzt das Zieltextfeld anklicken…|Haz clic en el campo de destino…|Натисніть цільове текстове поле…|Clique no campo de destino agora…|Cliquez sur le champ de destination…|Нажмите целевое текстовое поле…
+{v0} dictations|{v0} dyktowań|{v0} 次听写|{v0} 件の音声入力|{v0} Diktate|{v0} dictados|Диктувань: {v0}|{v0} ditados|{v0} dictées|Диктовок: {v0}
+{v0} ready|{v0} gotowy|{v0} 已就绪|{v0} 準備完了|{v0} bereit|{v0} listo|{v0} готово|{v0} pronto|{v0} prêt|{v0} готово
+{v0} MB on disk|{v0} MB na dysku|磁盘占用 {v0} MB|ディスク上 {v0} MB|{v0} MB auf dem Datenträger|{v0} MB en disco|{v0} МБ на диску|{v0} MB em disco|{v0} Mo sur disque|{v0} МБ на диске
+{v0} words in the current view|{v0} słów w bieżącym widoku|当前视图中有 {v0} 个词|現在の表示に {v0} 語|{v0} Wörter in der aktuellen Ansicht|{v0} palabras en la vista actual|{v0} слів у поточному перегляді|{v0} palavras na visualização atual|{v0} mots dans la vue actuelle|{v0} слов в текущем виде
+Speech model: {v0}|Model mowy: {v0}|语音模型：{v0}|音声モデル: {v0}|Sprachmodell: {v0}|Modelo de voz: {v0}|Модель мовлення: {v0}|Modelo de voz: {v0}|Modèle vocal : {v0}|Речевая модель: {v0}
+For language: {v0}|Dla języka: {v0}|语言：{v0}|言語: {v0}|Für Sprache: {v0}|Para el idioma: {v0}|Для мови: {v0}|Para o idioma: {v0}|Pour la langue : {v0}|Для языка: {v0}
+Enable {v0}|Włącz {v0}|启用 {v0}|{v0} を有効にする|{v0} aktivieren|Activar {v0}|Увімкнути {v0}|Ativar {v0}|Activer {v0}|Включить {v0}

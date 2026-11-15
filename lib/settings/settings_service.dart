@@ -1,10 +1,53 @@
 import 'dart:convert';
+
+import 'settings_features.dart';
+
+import 'package:flutter/foundation.dart';
+
 import '../hotkeys/shortcut_binding.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+
 import '../shared/dictation_mode.dart';
 
-class SettingsService {
+class SettingsService extends ChangeNotifier {
+  String get interfaceLanguage => optionText('interfaceLanguage', 'system');
+  Future<void> setInterfaceLanguage(String value) =>
+      setOptionText('interfaceLanguage', value);
+
+  bool isSettingsPageVisible(int page) {
+    if (coreSettingsPages.contains(page)) return true;
+    for (final feature in optionalSettingsFeatures) {
+      if (feature.page == page) {
+        return _prefs.getBool('sidebar_${feature.id}') ??
+            switch (feature.id) {
+              'words' =>
+                vocabulary.trim().isNotEmpty ||
+                    decoderVocabulary.trim().isNotEmpty,
+              'history' => historyEnabled,
+              'api' => controlApi,
+              _ => false,
+            };
+      }
+    }
+    return false;
+  }
+
+  List<int> get visibleSettingsPages => [
+    for (var page = 0; page < settingsPageCount; page++)
+      if (isSettingsPageVisible(page)) page,
+  ];
+
+  Future<void> setSettingsPageVisible(int page, bool visible) async {
+    final feature = optionalSettingsFeatures
+        .where((f) => f.page == page)
+        .firstOrNull;
+    if (feature == null) return;
+    await _prefs.setBool('sidebar_${feature.id}', visible);
+    notifyListeners();
+  }
+
   static const _keyHotkeyType = 'hotkey_type';
   static const _keyVadThreshold = 'vad_threshold_dbfs';
   static const _keyVadSilenceDuration = 'vad_silence_duration_ms';
@@ -107,6 +150,60 @@ class SettingsService {
       _prefs.setBool('hold_shortcut', value);
   bool get autoStop => _prefs.getBool('auto_stop') ?? true;
   Future<void> setAutoStop(bool value) => _prefs.setBool('auto_stop', value);
+  int get historyRetentionDays => _prefs.getInt('history_retention_days') ?? 0;
+  Future<void> setHistoryRetentionDays(int value) async {
+    if (![0, 1, 7, 30, 90].contains(value)) {
+      throw ArgumentError.value(value, 'value', 'Unsupported retention period');
+    }
+    await _prefs.setInt('history_retention_days', value);
+  }
+
+  bool extraShortcutEnabled(ShortcutAction action) =>
+      _prefs.getBool('shortcut_enabled_${action.name}') ?? false;
+  Future<void> setExtraShortcutEnabled(ShortcutAction action, bool value) =>
+      _prefs.setBool('shortcut_enabled_${action.name}', value);
+  bool extraShortcutHold(ShortcutAction action) =>
+      _prefs.getBool('shortcut_hold_${action.name}') ?? false;
+  Future<void> setExtraShortcutHold(ShortcutAction action, bool value) =>
+      _prefs.setBool('shortcut_hold_${action.name}', value);
+  bool get copyOnly => _prefs.getBool('copy_only') ?? false;
+  Future<void> setCopyOnly(bool value) => _prefs.setBool('copy_only', value);
+  bool get speakersOnly => _prefs.getBool('speakers_only') ?? false;
+  Future<void> setSpeakersOnly(bool value) =>
+      _prefs.setBool('speakers_only', value);
+  bool get notchIndicator => _prefs.getBool('notch_indicator') ?? false;
+  Future<void> setNotchIndicator(bool value) =>
+      _prefs.setBool('notch_indicator', value);
+  bool option(String key, {bool fallback = false}) =>
+      _prefs.getBool('option_$key') ?? fallback;
+  Future<void> setOption(String key, bool value) async {
+    await _prefs.setBool('option_$key', value);
+    notifyListeners();
+  }
+
+  String optionText(String key, [String fallback = '']) =>
+      _prefs.getString('option_$key') ?? fallback;
+  Future<void> setOptionText(String key, String value) async {
+    await _prefs.setString('option_$key', value);
+    notifyListeners();
+  }
+
+  bool get controlApi => _prefs.getBool('control_api') ?? false;
+  Future<void> setControlApi(bool value) =>
+      _prefs.setBool('control_api', value);
+  bool get keepHistoryAudio => _prefs.getBool('keep_history_audio') ?? false;
+  Future<void> setKeepHistoryAudio(bool value) =>
+      _prefs.setBool('keep_history_audio', value);
+  String get appearance => _prefs.getString('appearance') ?? 'system';
+  Future<void> setAppearance(String value) async {
+    await _prefs.setString('appearance', value);
+    notifyListeners();
+  }
+
+  String get meetingSummaryProvider =>
+      _prefs.getString('meeting_summary_provider') ?? 'off';
+  Future<void> setMeetingSummaryProvider(String value) =>
+      _prefs.setString('meeting_summary_provider', value);
   bool get historyEnabled => _prefs.getBool('history_enabled') ?? false;
   Future<void> setHistoryEnabled(bool value) =>
       _prefs.setBool('history_enabled', value);
@@ -135,9 +232,12 @@ class SettingsService {
       final to = line.substring(split + 1).trim();
       if (from.isEmpty || to.isEmpty) continue;
       text = text.replaceAllMapped(
-          RegExp('(?<![a-zA-Z0-9_])${RegExp.escape(from)}(?![a-zA-Z0-9_])',
-              caseSensitive: false),
-          (_) => to);
+        RegExp(
+          '(?<![a-zA-Z0-9_])${RegExp.escape(from)}(?![a-zA-Z0-9_])',
+          caseSensitive: false,
+        ),
+        (_) => to,
+      );
     }
     return text;
   }
@@ -145,16 +245,20 @@ class SettingsService {
   Map<ShortcutAction, ShortcutBinding> get shortcuts {
     final values = ShortcutBinding.defaults;
     try {
-      final data = jsonDecode(_prefs.getString('shortcuts') ?? '{}')
-          as Map<String, dynamic>;
+      final data = jsonDecode(
+        _prefs.getString('shortcuts') ?? '{}',
+      ) as Map<String, dynamic>;
       for (final entry in data.entries) {
         final action = ShortcutAction.values.byName(entry.key);
         final binding = ShortcutBinding.fromJson(
-            Map<String, dynamic>.from(entry.value as Map));
+          Map<String, dynamic>.from(entry.value as Map),
+        );
         binding.validate(allowModifierOnly: action == ShortcutAction.dictation);
         values[action] = binding;
       }
-    } catch (_) {/* Retain known defaults for invalid persisted values. */}
+    } catch (_) {
+      /* Retain known defaults for invalid persisted values. */
+    }
     if (hotkeyType == 2) {
       values[ShortcutAction.dictation] = ShortcutBinding.legacyDictation;
     }
@@ -170,9 +274,11 @@ class SettingsService {
 
   Future<void> setShortcuts(Map<ShortcutAction, ShortcutBinding> values) =>
       _prefs.setString(
-          'shortcuts',
-          jsonEncode(values
-              .map((action, value) => MapEntry(action.name, value.toJson()))));
+        'shortcuts',
+        jsonEncode(
+          values.map((action, value) => MapEntry(action.name, value.toJson())),
+        ),
+      );
 
   String get recordingAudio =>
       _prefs.getString('recording_audio') ?? 'unchanged';
@@ -198,7 +304,8 @@ class SettingsService {
   Map<String, String> get keyboardModels {
     try {
       return Map<String, String>.from(
-          jsonDecode(_prefs.getString('keyboard_models') ?? '{}') as Map);
+        jsonDecode(_prefs.getString('keyboard_models') ?? '{}') as Map,
+      );
     } catch (_) {
       return {};
     }
